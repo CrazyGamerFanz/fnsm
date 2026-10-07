@@ -143,17 +143,19 @@ function meView(){
  <div class="card"><div class="row sp"><span class="hn">Vibration</span><button class="chip ${S.haptics?'on':''}" id="hap">${S.haptics?'On':'Off'}</button></div></div>
  <button class="btn ghost" id="reset" style="margin-top:8px">Reset progress</button>`;
 }
-function render(){
+function render(anim){
  header();const v=$('#view');
  if(tab==='map'){v.innerHTML='<div id="mapslot"></div><div id="maplist"></div>';mountMap();$('#maplist').innerHTML=listHTML()}
  else v.innerHTML=({feed:feedView,cam:camView,me:meView})[tab]();
+ if(anim){v.classList.remove('vin');void v.offsetWidth;v.classList.add('vin')}
  save();
 }
-function setTab(t){tab=t;document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));render();$('#view').scrollTop=0}
+function setTab(t){tab=t;document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));$('#view').scrollTop=0;render(true)}
 
 /* ---------- map ---------- */
-function hexIcon(r,near){const T=THREAT[r.th==null?1:r.th],d=miles(S.pos,r);return L.divIcon({className:'mk',iconSize:[72,92],iconAnchor:[32,36],html:`<div class="mkp" style="--c:${T.c}"><svg viewBox="0 0 72 72" width="72" height="72">${(near||r.th===3)?`<circle class="pr" cx="32" cy="36" r="23" fill="none" stroke="${T.c}" stroke-width="2.500"/>`:''}${core()}${badge(r.ty,52,53,8.500)}${bars(r.th==null?1:r.th,50,21,T.c)}</svg><div class="dist">${d.toFixed(1)} MI</div></div>`})}
-function playerIcon(){return L.divIcon({className:'mk',iconSize:[40,40],iconAnchor:[20,20],html:'<div class="me"><i></i><svg viewBox="0 0 40 40" width="40" height="40"><polygon points="20,3 34,33 20,26 6,33" fill="#fff" stroke="#6fd3ff" stroke-width="2.200" stroke-linejoin="round"/><polygon points="20,13 26,27 20,23 14,27" fill="#ff3fa4"/></svg></div>'})}
+const seenPins=new Set();let pinN=0;
+function hexIcon(r,near,isNew){const T=THREAT[r.th==null?1:r.th],d=miles(S.pos,r);return L.divIcon({className:'mk',iconSize:[72,92],iconAnchor:[32,36],html:`<div class="mkp${isNew?' pin-in':''}" style="--c:${T.c};${isNew?'animation-delay:'+(pinN++%8)*70+'ms':''}"><svg viewBox="0 0 72 72" width="72" height="72">${(near||r.th===3)?`<circle class="pr" cx="32" cy="36" r="23" fill="none" stroke="${T.c}" stroke-width="2.500"/>`:''}${core()}${badge(r.ty,52,53,8.500)}${bars(r.th==null?1:r.th,50,21,T.c)}</svg><div class="dist">${d.toFixed(1)} MI</div></div>`})}
+function playerIcon(){return L.divIcon({className:'mk mk-me',iconSize:[40,40],iconAnchor:[20,20],html:'<div class="me"><i></i><svg viewBox="0 0 40 40" width="40" height="40"><polygon points="20,3 34,33 20,26 6,33" fill="#fff" stroke="#6fd3ff" stroke-width="2.200" stroke-linejoin="round"/><polygon points="20,13 26,27 20,23 14,27" fill="#ff3fa4"/></svg></div>'})}
 function buildMapWrap(){
  mapWrap=document.createElement('div');mapWrap.id='mapwrap';
  mapWrap.innerHTML='<div id="map" style="position:absolute;inset:0"></div><div class="hudL" id="hudL"></div><div class="hudR"><button id="bz" title="Zones">ZONES</button><button id="br" title="Radar">RADAR</button><button id="btk" title="Track my location">TRACK</button><button id="bc" title="Recenter">CENTER</button><button id="brp" class="rp">+ REPORT</button></div><div class="hudB" id="hudB"></div>';
@@ -184,7 +186,7 @@ function refreshMap(){
  playerMk.setLatLng([S.pos.lat,S.pos.lng]);
  const nid=(nearest()[0]||{}).id;
  S.reqs.forEach(r=>{if(hide.has(r.ty))return;
-  const m=L.marker([r.lat,r.lng],{icon:hexIcon(r,r.id===nid)}).addTo(layers.req);
+  const isNew=!seenPins.has(r.id);seenPins.add(r.id);const m=L.marker([r.lat,r.lng],{icon:hexIcon(r,r.id===nid,isNew)}).addTo(layers.req);
   m.on('click',e=>{L.DomEvent.stopPropagation(e);if(!busy)openSheet(r.id)});
  });
  if(showZones)zs().forEach(z=>{
@@ -221,21 +223,22 @@ function clearRoute(){if(layers.route)layers.route.clearLayers();routePts=null}
 function openSheet(id){
  const r=S.reqs.find(x=>x.id==id);if(!r)return;sel=r;const T=TYPES[r.ty],d=miles(S.pos,r);
  if(tab==='map'&&map){$('#view').scrollTop=0;drawRoute(r)}
- const sh=$('#sheet');sh.classList.remove('hide');
+ const sh=$('#sheet');sh.classList.remove('hide');$('#scrim').classList.add('on');sh.classList.remove('swap');void sh.offsetWidth;sh.classList.add('swap');
  sh.innerHTML=`<div class="row sp"><span class="row" style="gap:8px"><span class="tag ${T.tag}">${T.n}${r.sub?' · '+(CRIMES.find(x=>x[0]===r.sub)||[0,''])[1]:''}</span>${thTag(r.th)}</span><button class="like" id="cls">Close</button></div>
  <div class="shot" style="height:120px">${scene(r.ty,r.sd,r.sub)}</div><div class="hn" style="font-size:18px">${r.t}</div><div class="mu">${r.mine?'Reported by you':'@'+r.by} · ${r.loc} · ${ago(r.ts)}</div>
  <div class="txt" style="margin:6px 0">${r.d}</div><div class="row sp mu" style="margin-bottom:10px"><span>${d.toFixed(1)} mi · about ${Math.max(6,Math.round(d*14))} sec swing</span><span style="color:#fff">+${r.rw} rep</span></div>
  <div id="act"><button class="btn" id="go">Swing to location</button></div>`;
 }
-function closeSheet(){if(busy)return;$('#sheet').classList.add('hide');sel=null;clearRoute()}
+function shut(){$('#sheet').classList.add('hide');$('#scrim').classList.remove('on')}
+function closeSheet(){if(busy)return;shut();sel=null;clearRoute()}
 function swing(){
- const r=sel;if(!r||busy)return;busy=true;buzz(30);
+ const r=sel;if(!r||busy)return;busy=true;buzz(30);if(mapWrap)mapWrap.classList.add('swinging');
  if(!tab||tab!=='map')setTab('map');
  if(!routePts)drawRoute(r);
  $('#act').innerHTML='<div class="mu" style="letter-spacing:.2em;text-transform:uppercase">Swinging…</div><div class="pb"><i id="pg"></i></div>';
  const pts=routePts,dur=2600,t0=performance.now();
  (function step(now){
-  const p=Math.min(1,(now-t0)/dur),i=Math.min(pts.length-1,Math.floor(p*(pts.length-1))),e=$('#pg');
+  const p=Math.max(0,Math.min(1,(now-t0)/dur)),i=Math.max(0,Math.min(pts.length-1,Math.floor(p*(pts.length-1)))),e=$('#pg');
   if(e)e.style.width=(p*100)+'%';
   playerMk.setLatLng(pts[i]);map.panTo(pts[i],{animate:false});
   if(p<1)requestAnimationFrame(step);else finish(r);
@@ -248,14 +251,16 @@ function finish(r){
  const quote=THANKS[Math.random()*THANKS.length|0];
  S.posts.unshift({id:Date.now(),h:r.by,loc:r.loc,t:'Spider-Man handled it: '+r.t+'. '+quote,tag:'Resolved',ty:r.ty,sub:r.sub,l:Math.random()*900+100|0,ts:Date.now(),sd:r.sd});
  if(S.reqs.length<4)spawn(S);
- busy=false;$('#sheet').classList.add('hide');sel=null;clearRoute();save();buzz([60,40,60]);
+ busy=false;if(mapWrap)mapWrap.classList.remove('swinging');shut();sel=null;clearRoute();save();buzz([60,40,60]);
  const up=lvl(S)>before;
  const m=$('#modal');m.classList.remove('hide');
- m.innerHTML=`<div class="mc"><img src="logo.svg" alt="" width="84" height="84"><div class="kick">${up?'Level up':'Mission complete'}</div><div class="big">${up?'LV '+lvl(S):'+'+r.rw+' rep'}</div>
+ m.innerHTML=`<div class="mc"><img src="logo.svg" alt="" width="84" height="84"><div class="kick">${up?'Level up':'Mission complete'}</div><div class="big" id="bigc">${up?'LV '+lvl(S):'+0 rep'}</div>
  <div class="hn" style="font-size:16px">${r.t}</div><div style="margin:6px 0">${thTag(r.th)}</div><div class="mu" style="margin:4px 0 12px">${r.mine?'You':'@'+r.by}: "${quote}"</div>
- <div class="pb"><i style="width:${(S.rep%500)/5}%"></i></div><div class="mu" style="margin-bottom:16px">${S.rep%500} / 500 to next level${up?'':' · +'+r.rw+' rep'}</div><button class="btn" id="cont">Continue patrol</button></div>`;
+ <div class="pb"><i id="mbar" style="width:0"></i></div><div class="mu" style="margin-bottom:16px">${S.rep%500} / 500 to next level${up?'':' · +'+r.rw+' rep'}</div><button class="btn" id="cont">Continue patrol</button></div>`;
  header();if(map)refreshMap();
+ requestAnimationFrame(()=>requestAnimationFrame(()=>{const b=$('#mbar');if(b)b.style.width=((S.rep%500)/5)+'%';if(!up)countUp($('#bigc'),r.rw)}));
 }
+function countUp(el,to){if(!el)return;const t0=performance.now(),d=800;(function f(n){const p=Math.min(1,(n-t0)/d),e=1-Math.pow(1-p,3);el.textContent='+'+Math.round(to*e)+' rep';if(p<1)requestAnimationFrame(f)})(t0)}
 function closeModal(){$('#modal').classList.add('hide');render()}
 
 /* ---------- photo ---------- */
@@ -271,22 +276,35 @@ function shoot(){
 }
 
 /* ---------- intro / onboarding ---------- */
+let ob={step:0,handle:''};
+function enterApp(){const a=$('#app');a.classList.remove('enter');void a.offsetWidth;a.classList.add('enter');setTimeout(()=>a.classList.remove('enter'),1400)}
+function leaveIntro(){const el=$('#intro');el.classList.add('out');setTimeout(()=>el.remove(),650);enterApp()}
 function intro(){
  const el=$('#intro');
- const logo='<img class="big-logo" src="logo.svg" alt="FNSM" width="150" height="150">';
- if(S.handle){el.innerHTML=`<div class="ic">${logo}<div class="wm big2">FN<b>SM</b></div><div class="sub">Friendly Neighborhood Spider-Man</div></div>`;setTimeout(()=>{el.classList.add('out');setTimeout(()=>el.remove(),500)},1100);return}
- el.innerHTML=`<div class="ic">${logo}<div class="wm big2">FN<b>SM</b></div><div class="sub">Friendly Neighborhood Spider-Man</div>
- <p class="lead">The city calls. You answer. Pick a handle, check requests from New Yorkers, and swing into action.</p>
- <input id="hn0" maxlength="16" placeholder="your_handle" autocomplete="off" autocapitalize="none"><div class="err" id="err0"></div>
- <button class="btn" id="start" style="margin-top:12px">Start patrol</button></div>`;
+ const logo='<img class="big-logo" src="logo.svg" alt="FNSM" width="132" height="132">';
+ if(S.handle){el.innerHTML=`<div class="ic">${logo}<div class="wm big2">FN<b>SM</b></div><div class="sub">Friendly Neighborhood Spider-Man</div><div class="ld"><i></i></div></div>`;setTimeout(leaveIntro,1100);return}
+ el.innerHTML=`<div class="ob"><div class="obtrack" id="obt">
+ <section class="obp on">${logo}<div class="wm big2">FN<b>SM</b></div><div class="sub">Friendly Neighborhood Spider-Man</div><p class="lead">The city calls. You answer. Get requests from New Yorkers and swing into action.</p><button class="btn" data-ob="1">Get started</button></section>
+ <section class="obp"><div class="kick">Step 1 of 3</div><h1>Pick your handle</h1><p class="lead">This is how you'll show up on the feed.</p><input id="hn0" maxlength="16" placeholder="your_handle" autocomplete="off" autocapitalize="none"><div class="err" id="err0"></div><button class="btn" id="obh" style="margin-top:14px">Continue</button><button class="lnk" data-ob="0">Back</button></section>
+ <section class="obp"><div class="kick">Step 2 of 3</div><div class="radar"><i></i><i></i><i></i><svg viewBox="0 0 40 40"><use href="#spider"/></svg></div><h1>Let Spider-Man find you</h1><p class="lead">Turn on location so requests appear around you and your marker follows you on the map. It stays on your device.</p><button class="btn" id="obl">Enable location</button><button class="lnk" id="obs">Not now</button></section>
+ <section class="obp"><div class="kick">Step 3 of 3</div><div class="check"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24"/><path d="M15 27l8 8 14-16"/></svg></div><h1>You're all set</h1><p class="lead" id="obsum"></p><button class="btn" id="start">Start patrol</button></section>
+ </div><div class="dots" id="dots"><i class="on"></i><i></i><i></i><i></i></div></div>`;
 }
-function startPatrol(){
- const v=$('#hn0').value.trim().replace(/[^a-zA-Z0-9_.]/g,''),e=$('#err0');
- if(!v){e.textContent='Enter a handle to continue.';return}
- S.handle=v;save();buzz(30);
- const el=$('#intro');el.classList.add('out');setTimeout(()=>el.remove(),500);render();
+function obGo(n){
+ ob.step=n;$('#obt').style.transform='translateX('+(-n*100)+'%)';
+ document.querySelectorAll('#intro .obp').forEach((p,i)=>p.classList.toggle('on',i===n));
+ document.querySelectorAll('#dots i').forEach((d,i)=>d.classList.toggle('on',i<=n));
+ if(n===1)setTimeout(()=>{const i=$('#hn0');if(i)i.focus({preventScroll:true})},520);
+ if(n===3)$('#obsum').innerHTML='Handle <b>@'+ob.handle+'</b><br>Location '+(S.track?'on':'off. You can turn it on from the map.');
 }
-
+function obHandle(){
+ const v=$('#hn0').value.trim().replace(/[^a-zA-Z0-9_.]/g,''),e=$('#err0'),i=$('#hn0');
+ if(!v){e.textContent='Enter a handle to continue.';i.classList.remove('shake');void i.offsetWidth;i.classList.add('shake');return}
+ e.textContent='';ob.handle=v;i.blur();obGo(2);
+}
+function finishSetup(){
+ S.handle=ob.handle||'spider_fan';save();buzz(30);render();leaveIntro();
+}
 
 /* ---------- location tracking ---------- */
 let watchId=null,gps={ok:false,acc:null},gpsCircle=null,fixed=false;
@@ -339,8 +357,8 @@ function nearestZone(lat,lng){if(S.off)return 'Your area';let b=null,d=1e9;ZONES
 function openReport(){
  let c=S.pos;if(tab==='map'&&map){const m=map.getCenter();c={lat:m.lat,lng:m.lng}}
  F={ty:'crime',sub:'mugging',title:'',desc:'',th:null,lat:c.lat,lng:c.lng,loc:nearestZone(c.lat,c.lng),err:''};
- if(!$('#report')){const d=document.createElement('div');d.id='report';$('#app').appendChild(d)}
- $('#report').classList.remove('hide');renderReport();$('#report').scrollTop=0;
+ if(!$('#report')){const d=document.createElement('div');d.id='report';d.className='hide';$('#app').appendChild(d);void d.offsetWidth}
+ renderReport();$('#report').scrollTop=0;requestAnimationFrame(()=>$('#report').classList.remove('hide'));
 }
 function readReport(){const t=$('#rtitle'),d=$('#rdesc');if(t)F.title=t.value;if(d)F.desc=d.value}
 function renderReport(){
@@ -379,8 +397,9 @@ document.addEventListener('click',e=>{
  const t=e.target.closest('button,[data-r]');if(!t)return;
  if(t.closest('#mapwrap'))return;
  if(t.closest('#nav')){if(!busy){closeSheet();setTab(t.dataset.t)}return}
+ if(t.dataset.ob!=null&&t.dataset.ob!==''){return obGo(+t.dataset.ob)}
  if(t.dataset.f){filter=t.dataset.f;return render()}
- if(t.dataset.l){const id=+t.dataset.l;S.liked=S.liked.includes(id)?S.liked.filter(x=>x!==id):[...S.liked,id];buzz(15);return render()}
+ if(t.dataset.l){const id=+t.dataset.l,was=S.liked.includes(id);S.liked=was?S.liked.filter(x=>x!==id):[...S.liked,id];buzz(15);const n=t.lastChild;if(n&&n.nodeType===3)n.nodeValue=(+n.nodeValue)+(was?-1:1);t.classList.toggle('on',!was);t.classList.remove('pop');void t.offsetWidth;if(!was)t.classList.add('pop');save();return}
  if(t.dataset.rt){readReport();F.ty=t.dataset.rt;F.err='';return renderReport()}
  if(t.dataset.rs){readReport();F.sub=t.dataset.rs;return renderReport()}
  if(t.dataset.rth){readReport();F.th=+t.dataset.rth;F.err='';return renderReport()}
@@ -394,7 +413,10 @@ document.addEventListener('click',e=>{
   case'cont':return closeModal();
   case'shut':return shoot();
   case'newscene':S.preview=null;return render();
-  case'start':return startPatrol();
+  case'start':return finishSetup();
+  case'obh':return obHandle();
+  case'obl':startTrack();return obGo(3);
+  case'obs':return obGo(3);
   case'trk':S.track?stopTrack():startTrack();return;
   case'hap':S.haptics=!S.haptics;buzz(20);return render();
   case'install':if(deferred){deferred.prompt();deferred=null;render()}return;
@@ -402,7 +424,8 @@ document.addEventListener('click',e=>{
   case'reset':if(confirm('Reset all progress? Your handle stays.')){const h=S.handle;S=fresh();S.handle=h;hide.clear();filter='all';if(map){playerMk.setLatLng([S.pos.lat,S.pos.lng]);map.setView([S.pos.lat,S.pos.lng],13)}render();toast('Progress reset')}return;
  }
 });
-document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='hn0')startPatrol()});
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='hn0')obHandle()});
+document.addEventListener('click',e=>{if(e.target.id==='scrim')closeSheet()});
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;if(tab==='me')render()});
 window.addEventListener('appinstalled',()=>{deferred=null;toast('FNSM installed')});
 setInterval(()=>{
