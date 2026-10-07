@@ -1,6 +1,8 @@
 (()=>{
 const $=s=>document.querySelector(s);
-const KEY='fnsm-v2';
+const AKEY='fnsm-accounts',SKEY='fnsm-session',LEGACY='fnsm-v2';
+let acct=null;
+const stateKey=u=>'fnsm-v2:'+u;
 const TYPES={
   rescue:{n:'Rescue',c:'#e8283c',k:'',tag:''},
   crime:{n:'Crime',c:'#4da3ff',k:'b',tag:'b'},
@@ -63,8 +65,9 @@ let map,mk,mapWrap,layers={},playerMk,routePts=null,routeLine=null;
 function fresh(){const s={v:2,handle:'',rep:0,helped:0,photos:0,byType:{rescue:0,crime:0,fire:0,assist:0},liked:[],haptics:true,pos:{...START},track:false,off:null,posts:[],reqs:[],id:100,preview:null};
  const n=Date.now();s.posts=SEED_POSTS.map((p,i)=>({id:i+1,h:p[0],loc:p[1],t:p[2],tag:p[3],ty:p[4],l:p[5],ts:n-p[6]*60000,sd:i*31+7,sub:p[7]}));
  for(let i=0;i<5;i++)spawn(s);return s}
-function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.v===2){s.reqs.forEach(r=>{if(r.th==null){const q=POOL[r.k];r.th=q?q[7]:1;r.sub=r.sub||(q&&q[8])}});s.posts.forEach(p=>{if(p.ty==='crime'&&!p.sub)p.sub=CRIMES[p.sd%CRIMES.length][0]});return s}}catch(e){}return fresh()}
-function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+function parseState(raw){const s=JSON.parse(raw);if(s&&s.v===2){s.reqs.forEach(r=>{if(r.th==null){const q=POOL[r.k];r.th=q?q[7]:1;r.sub=r.sub||(q&&q[8])}});s.posts.forEach(p=>{if(p.ty==='crime'&&!p.sub)p.sub=CRIMES[p.sd%CRIMES.length][0]});return s}return null}
+function load(){try{const u=localStorage.getItem(SKEY),us=getUsers();if(u&&us[u]){acct=u;const raw=localStorage.getItem(stateKey(u));const s=raw&&parseState(raw)||fresh();s.handle=us[u].name;return s}}catch(e){}return fresh()}
+function save(){if(!acct)return;try{localStorage.setItem(stateKey(acct),JSON.stringify(S))}catch(e){}}
 function lvl(s){return Math.floor(s.rep/500)+1}
 function ago(ts){const m=Math.max(0,Math.round((Date.now()-ts)/60000));return m<1?'just now':m<60?m+' min ago':Math.round(m/60)+' hr ago'}
 function miles(a,b){const t=x=>x*Math.PI/180,dl=t(b.lat-a.lat),dg=t(b.lng-a.lng),h=Math.sin(dl/2)**2+Math.cos(t(a.lat))*Math.cos(t(b.lat))*Math.sin(dg/2)**2;return 7917.6*Math.asin(Math.sqrt(h))}
@@ -130,6 +133,7 @@ function installBlock(){
  if(deferred)return '<button class="btn" id="install" style="margin-bottom:10px">Install app</button>';
  return `<div class="card"><div class="hn">Install on your phone</div><div class="mu" style="margin-top:4px;line-height:1.5">${ios?'Tap the Share button in Safari, then Add to Home Screen.':'Open the browser menu, then choose Install app or Add to Home screen.'}</div></div>`;
 }
+function accountCard(){const u=getUsers()[acct]||{};return `<div class="card"><div class="mu" style="margin-bottom:6px">Account</div><div class="hn">@${S.handle}</div><div class="mu">${u.email||''}</div><div class="row" style="gap:8px;margin-top:12px"><button class="chip" id="logout">Log out</button><button class="chip" id="delacct" style="color:#ff8a96;border-color:#5a1a24">Delete account</button></div></div>`}
 function meView(){
  const l=lvl(S);
  return `<div class="row" style="gap:14px;margin-bottom:14px"><div class="av" style="width:60px;height:60px;font-size:20px;background:#2a0f15;color:#ff8a96">${ini(S.handle)}</div><div><div class="hn" style="font-size:20px">@${S.handle}</div><div class="mu">Neighborhood hero · Level ${l}</div></div></div>
@@ -138,8 +142,8 @@ function meView(){
  <h2>Badges</h2><div class="card g">${BADGES.map(b=>{const ok=b[2](S);return `<div class="badge ${ok?'':'lock'}"><div class="hex" style="background:${ok?'var(--red)':'#2a3148'}"><svg><use href="#spider"/></svg></div><div><div class="hn">${b[0]}</div><div class="mu">${b[1]}</div></div></div>`}).join('')}</div>
  <h2>Settings</h2>
  ${installBlock()}
- <div class="card"><div class="mu" style="margin-bottom:6px">Handle</div><div class="row"><input id="hin" maxlength="16" value="${S.handle}" autocomplete="off"><button class="chip on" id="hsave">Save</button></div><div class="err" id="herr"></div></div>
- <div class="card"><div class="row sp"><div><div class="hn">Location tracking</div><div class="mu" style="margin-top:3px;line-height:1.4">Spider-Man follows your phone's GPS. It stays on your device.</div></div><button class="chip ${S.track?'on':''}" id="trk">${S.track?(gps.ok?'On':'Locating'):'Off'}</button></div></div>
+ ${accountCard()}
+ ${trackCard()}
  <div class="card"><div class="row sp"><span class="hn">Vibration</span><button class="chip ${S.haptics?'on':''}" id="hap">${S.haptics?'On':'Off'}</button></div></div>
  <button class="btn ghost" id="reset" style="margin-top:8px">Reset progress</button>`;
 }
@@ -165,7 +169,7 @@ function buildMapWrap(){
   else if(b.id==='bz'){showZones=!showZones;refreshMap()}
   else if(b.id==='br'){showRadar=!showRadar;refreshMap()}
   else if(b.id==='brp'){openReport()}
-  else if(b.id==='btk'){S.track?stopTrack():startTrack()}
+  else if(b.id==='btk'){toggleTrack()}
   else if(b.id==='bc'){map.flyTo([S.pos.lat,S.pos.lng],13,{duration:.8})}
  });
  map=L.map(mapWrap.querySelector('#map'),{zoomControl:false,attributionControl:true,minZoom:10,maxZoom:18,zoomSnap:.5}).setView([S.pos.lat,S.pos.lng],12);
@@ -203,8 +207,8 @@ function refreshMap(){
  }
  $('#hudL').innerHTML=Object.keys(TYPES).map(k=>`<button data-h="${k}" class="${hide.has(k)?'off':''}" style="--c:${TYPES[k].c}"><i></i>${S.reqs.filter(r=>r.ty===k).length}</button>`).join('');
  $('#bz').classList.toggle('on',showZones);$('#br').classList.toggle('on',showRadar);
- $('#hudB').textContent=S.reqs.length+' active'+(S.track?(gps.ok?' · GPS ±'+Math.round(gps.acc)+' m':' · locating…'):'');
- $('#btk').classList.toggle('on',!!S.track);$('#btk').textContent=S.track?'TRACKING':'TRACK';
+ $('#hudB').textContent=S.reqs.length+' active'+(tstate==='on'?' · GPS ±'+Math.round(gps.acc)+' m':tstate==='locating'?' · locating…':'');
+ $('#btk').classList.toggle('on',tstate==='on'||tstate==='locating');$('#btk').textContent=tstate==='on'?'TRACKING':tstate==='locating'?'LOCATING…':'TRACK';
 }
 function arc(a,b){
  const mx=(a.lat+b.lat)/2,my=(a.lng+b.lng)/2,dx=b.lat-a.lat,dy=b.lng-a.lng,cx=mx-dy*.28,cy=my+dx*.28,pts=[];
@@ -246,7 +250,7 @@ function swing(){
 }
 function finish(r){
  const before=lvl(S);
- S.rep+=r.rw;S.helped++;S.byType[r.ty]=(S.byType[r.ty]||0)+1;if(!S.track)S.pos={lat:r.lat,lng:r.lng};
+ S.rep+=r.rw;S.helped++;S.byType[r.ty]=(S.byType[r.ty]||0)+1;if(tstate!=='on')S.pos={lat:r.lat,lng:r.lng};
  S.reqs=S.reqs.filter(x=>x.id!==r.id);
  const quote=THANKS[Math.random()*THANKS.length|0];
  S.posts.unshift({id:Date.now(),h:r.by,loc:r.loc,t:'Spider-Man handled it: '+r.t+'. '+quote,tag:'Resolved',ty:r.ty,sub:r.sub,l:Math.random()*900+100|0,ts:Date.now(),sd:r.sd});
@@ -278,76 +282,155 @@ function shoot(){
 /* ---------- intro / onboarding ---------- */
 let ob={step:0,handle:''};
 function enterApp(){const a=$('#app');a.classList.remove('enter');void a.offsetWidth;a.classList.add('enter');setTimeout(()=>a.classList.remove('enter'),1400)}
-function leaveIntro(){const el=$('#intro');el.classList.add('out');setTimeout(()=>el.remove(),650);enterApp()}
+function leaveIntro(){const el=$('#intro');if(!el)return;el.classList.add('out');setTimeout(()=>el.remove(),650);enterApp()}
 function intro(){
  const el=$('#intro');
  const logo='<img class="big-logo" src="logo.svg" alt="FNSM" width="132" height="132">';
- if(S.handle){el.innerHTML=`<div class="ic">${logo}<div class="wm big2">FN<b>SM</b></div><div class="sub">Friendly Neighborhood Spider-Man</div><div class="ld"><i></i></div></div>`;setTimeout(leaveIntro,1100);return}
+ if(acct&&S.handle){el.innerHTML=`<div class="ic">${logo}<div class="wm big2">FN<b>SM</b></div><div class="sub">Friendly Neighborhood Spider-Man</div><div class="ld"><i></i></div></div>`;setTimeout(leaveIntro,1100);return}
+ const legacy=!Object.keys(getUsers()).length&&localStorage.getItem(LEGACY);
  el.innerHTML=`<div class="ob"><div class="obtrack" id="obt">
  <section class="obp on">${logo}<div class="wm big2">FN<b>SM</b></div><div class="sub">Friendly Neighborhood Spider-Man</div><p class="lead">The city calls. You answer. Get requests from New Yorkers and swing into action.</p><button class="btn" data-ob="1">Get started</button></section>
- <section class="obp"><div class="kick">Step 1 of 3</div><h1>Pick your handle</h1><p class="lead">This is how you'll show up on the feed.</p><input id="hn0" maxlength="16" placeholder="your_handle" autocomplete="off" autocapitalize="none"><div class="err" id="err0"></div><button class="btn" id="obh" style="margin-top:14px">Continue</button><button class="lnk" data-ob="0">Back</button></section>
- <section class="obp"><div class="kick">Step 2 of 3</div><div class="radar"><i></i><i></i><i></i><svg viewBox="0 0 40 40"><use href="#spider"/></svg></div><h1>Let Spider-Man find you</h1><p class="lead">Turn on location so requests appear around you and your marker follows you on the map. It stays on your device.</p><button class="btn" id="obl">Enable location</button><button class="lnk" id="obs">Not now</button></section>
- <section class="obp"><div class="kick">Step 3 of 3</div><div class="check"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24"/><path d="M15 27l8 8 14-16"/></svg></div><h1>You're all set</h1><p class="lead" id="obsum"></p><button class="btn" id="start">Start patrol</button></section>
+ <section class="obp auth" id="authp"><div class="kick" id="authk">Welcome back</div>
+  <div class="seg2" data-m="login"><i class="ind"></i><button type="button" data-am="login" class="on">Log in</button><button type="button" data-am="signup">Sign up</button></div>
+  <form id="af" novalidate>
+   <div class="fld"><label id="a-idl" for="a-id">Username or email</label><input id="a-id" maxlength="40" placeholder="username or email" autocomplete="username" autocapitalize="none" spellcheck="false"></div>
+   <div class="su-only"><div><div class="fld"><label for="a-email">Email</label><input id="a-email" type="email" maxlength="60" placeholder="you@example.com" autocomplete="email" autocapitalize="none"></div></div></div>
+   <div class="fld"><label for="a-pw">Password</label><div class="pw"><input id="a-pw" type="password" maxlength="64" placeholder="Password" autocomplete="current-password"><button type="button" id="a-eye">Show</button></div></div>
+   <div class="su-only"><div><div class="fld"><label for="a-pw2">Confirm password</label><input id="a-pw2" type="password" maxlength="64" placeholder="Repeat password" autocomplete="new-password"></div></div></div>
+   <div class="err" id="a-err"></div>
+   <button class="btn" id="a-go" type="submit" style="margin-top:6px">Log in</button>
+  </form>
+  <div class="mu note">${legacy?'Your existing progress on this device will move to your new account.':'Accounts are stored on this device.'}</div>
+  <button class="lnk" data-ob="0">Back</button></section>
+ <section class="obp"><div class="kick">Last steps</div><div class="radar"><i></i><i></i><i></i><svg viewBox="0 0 40 40"><use href="#spider"/></svg></div><h1>Let Spider-Man find you</h1><p class="lead">Turn on location so requests appear around you and your marker follows you on the map. It stays on your device.</p><button class="btn" id="obl">Enable location</button><button class="lnk" id="obs">Not now</button></section>
+ <section class="obp"><div class="kick">All done</div><div class="check"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24"/><path d="M15 27l8 8 14-16"/></svg></div><h1>You're all set</h1><p class="lead" id="obsum"></p><button class="btn" id="start">Start patrol</button></section>
  </div><div class="dots" id="dots"><i class="on"></i><i></i><i></i><i></i></div></div>`;
 }
 function obGo(n){
  ob.step=n;$('#obt').style.transform='translateX('+(-n*100)+'%)';
  document.querySelectorAll('#intro .obp').forEach((p,i)=>p.classList.toggle('on',i===n));
  document.querySelectorAll('#dots i').forEach((d,i)=>d.classList.toggle('on',i<=n));
- if(n===1)setTimeout(()=>{const i=$('#hn0');if(i)i.focus({preventScroll:true})},520);
- if(n===3)$('#obsum').innerHTML='Handle <b>@'+ob.handle+'</b><br>Location '+(S.track?'on':'off. You can turn it on from the map.');
+ if(n===1)setTimeout(()=>{const i=$('#a-id');if(i&&ob.step===1)i.focus({preventScroll:true})},560);
+ if(n===3)$('#obsum').innerHTML='Signed in as <b>@'+S.handle+'</b><br>Location '+(tstate==='on'||tstate==='locating'?'on':'off. You can turn it on from the map or Profile.');
 }
-function obHandle(){
- const v=$('#hn0').value.trim().replace(/[^a-zA-Z0-9_.]/g,''),e=$('#err0'),i=$('#hn0');
- if(!v){e.textContent='Enter a handle to continue.';i.classList.remove('shake');void i.offsetWidth;i.classList.add('shake');return}
- e.textContent='';ob.handle=v;i.blur();obGo(2);
+function finishSetup(){save();buzz(30);render();leaveIntro()}
+
+/* ---------- accounts (stored on this device) ---------- */
+const b64e=u=>btoa(String.fromCharCode(...u)),b64d=t=>Uint8Array.from(atob(t),c=>c.charCodeAt(0));
+async function hashPw(pw,salt){
+ if(!(window.crypto&&crypto.subtle))throw new Error('secure');
+ const k=await crypto.subtle.importKey('raw',new TextEncoder().encode(pw),'PBKDF2',false,['deriveBits']);
+ const bits=await crypto.subtle.deriveBits({name:'PBKDF2',hash:'SHA-256',salt:b64d(salt),iterations:150000},k,256);
+ return b64e(new Uint8Array(bits));
 }
-function finishSetup(){
- S.handle=ob.handle||'spider_fan';save();buzz(30);render();leaveIntro();
+function getUsers(){try{return JSON.parse(localStorage.getItem(AKEY))||{}}catch(e){return {}}}
+function putUsers(u){localStorage.setItem(AKEY,JSON.stringify(u))}
+let authMode='login',fails=0,lockUntil=0,busyAuth=false;
+function setAuthMode(m){
+ authMode=m;const p=$('#authp');if(!p)return;
+ p.classList.toggle('su',m==='signup');
+ document.querySelectorAll('.seg2 button').forEach(b=>b.classList.toggle('on',b.dataset.am===m));$('.seg2').dataset.m=m;
+ $('#a-idl').textContent=m==='signup'?'Username':'Username or email';$('#a-id').placeholder=m==='signup'?'web_slinger':'username or email';
+ $('#a-pw').autocomplete=m==='signup'?'new-password':'current-password';
+ $('#a-go').textContent=m==='signup'?'Create account':'Log in';$('#authk').textContent=m==='signup'?'Join the neighborhood':'Welcome back';$('#a-err').textContent='';
+}
+async function authSubmit(){
+ if(busyAuth)return;
+ const err=$('#a-err'),go=$('#a-go'),id=$('#a-id').value.trim(),pw=$('#a-pw').value;
+ const fail=m=>{err.textContent=m;const f=$('#af');f.classList.remove('shake');void f.offsetWidth;f.classList.add('shake');buzz(40)};
+ if(Date.now()<lockUntil)return fail('Too many attempts. Try again in '+Math.ceil((lockUntil-Date.now())/1000)+' s.');
+ err.textContent='';busyAuth=true;go.disabled=true;go.textContent='One moment…';
+ try{
+  const users=getUsers();
+  if(authMode==='signup'){
+   const email=$('#a-email').value.trim().toLowerCase(),pw2=$('#a-pw2').value,k=id.toLowerCase();
+   if(!/^[a-zA-Z0-9_.]{3,16}$/.test(id))return fail('Username must be 3 to 16 letters, numbers, dots or underscores.');
+   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email))return fail('Enter a valid email address.');
+   if(pw.length<8)return fail('Password must be at least 8 characters.');
+   if(pw!==pw2)return fail('Passwords don\'t match.');
+   if(users[k])return fail('That username is taken.');
+   if(Object.values(users).some(u=>u.email===email))return fail('That email already has an account.');
+   const first=!Object.keys(users).length,salt=b64e(crypto.getRandomValues(new Uint8Array(16)));
+   users[k]={name:id,email,salt,hash:await hashPw(pw,salt),created:Date.now()};putUsers(users);
+   let st=null;if(first){try{const raw=localStorage.getItem(LEGACY);if(raw){st=parseState(raw);localStorage.removeItem(LEGACY)}}catch(e){}}
+   S=st||fresh();S.handle=id;acct=k;localStorage.setItem(SKEY,k);save();render();buzz(30);obGo(2);
+  }else{
+   if(!id||!pw)return fail('Enter your username and password.');
+   const low=id.toLowerCase(),u=users[low]||Object.values(users).find(x=>x.email===low);
+   const bad=()=>{if(++fails>=5){lockUntil=Date.now()+30000;fails=0}fail('Wrong username or password.')};
+   if(!u){await hashPw(pw,b64e(new Uint8Array(16)));return bad()}
+   if(await hashPw(pw,u.salt)!==u.hash)return bad();
+   fails=0;acct=u.name.toLowerCase();localStorage.setItem(SKEY,acct);
+   S=load();S.handle=u.name;save();render();buzz(30);leaveIntro();resumeTrack();
+  }
+ }catch(e){fail(e&&e.message==='secure'?'Accounts need a secure (https) connection.':'Something went wrong. Try again.')}
+ finally{busyAuth=false;go.disabled=false;go.textContent=authMode==='signup'?'Create account':'Log in'}
+}
+function logout(){stopTrack(true);try{localStorage.removeItem(SKEY)}catch(e){}location.reload()}
+function deleteAccount(){
+ if(!confirm('Delete your account and all progress on this device? This can\'t be undone.'))return;
+ const us=getUsers();delete us[acct];putUsers(us);try{localStorage.removeItem(stateKey(acct));localStorage.removeItem(SKEY)}catch(e){}
+ stopTrack(true);location.reload();
 }
 
 /* ---------- location tracking ---------- */
-let watchId=null,gps={ok:false,acc:null},gpsCircle=null,fixed=false;
+let watchId=null,gps={ok:false,acc:null},gpsCircle=null,fixed=false,tstate='off',tok=0,terr='';
 function relabel(){S.reqs.forEach(r=>{if(r.k>=0&&POOL[r.k])r.loc=S.off?'Your area':POOL[r.k][3]})}
 function shiftReqs(dl,dg){S.reqs.forEach(r=>{r.lat+=dl;r.lng+=dg})}
-function geoUI(){if(map)refreshMap();if(tab==='me')render()}
-function startTrack(){
- if(!('geolocation' in navigator)){toast('Location isn\'t available on this device');return}
- if(watchId!=null)return;
- S.track=true;gps={ok:false,acc:null};fixed=false;save();geoUI();
- watchId=navigator.geolocation.watchPosition(onFix,onGeoErr,{enableHighAccuracy:true,maximumAge:4000,timeout:25000});
+const tOn=()=>tstate==='on'||tstate==='locating';
+function trackHelp(){return /iPhone|iPad|iPod/i.test(navigator.userAgent)?'Location is blocked. Open Settings, then Privacy and Security, then Location Services, and allow it for Safari or FNSM. Then flip this switch again.':'Location is blocked. Tap the lock icon in the address bar, choose Permissions, allow Location, then flip this switch again.'}
+function trackStatus(){return tstate==='on'?'On · accuracy ±'+Math.round(gps.acc)+' m':tstate==='locating'?'Finding you…':tstate==='denied'?trackHelp():tstate==='error'?terr:'Off. Spider-Man stays where you last swung.'}
+function trackCard(){return `<div class="card" id="trkcard"><div class="row sp" style="gap:14px"><div style="flex:1;min-width:0"><div class="hn">Location tracking</div><div class="mu${tstate==='denied'||tstate==='error'?' warn':''}" id="trkst" style="margin-top:3px;line-height:1.45">${trackStatus()}</div></div><button class="sw${tOn()?' on':''}" id="trk" role="switch" aria-checked="${tOn()}" aria-label="Location tracking"><i></i></button></div></div>`}
+function geoUI(){
+ if(map)refreshMap();
+ const sw=$('#trk');if(sw){sw.classList.toggle('on',tOn());sw.setAttribute('aria-checked',tOn())}
+ const st=$('#trkst');if(st){st.textContent=trackStatus();st.classList.toggle('warn',tstate==='denied'||tstate==='error')}
 }
-function stopTrack(){
- if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null}
- S.track=false;gps={ok:false,acc:null};if(gpsCircle){gpsCircle.remove();gpsCircle=null}
- save();geoUI();toast('Tracking off');
+function toggleTrack(){tOn()?stopTrack():startTrack()}
+function startTrack(){
+ if(!('geolocation' in navigator)){tstate='error';terr='This device doesn\'t support location.';geoUI();toast('Location isn\'t available');return}
+ const my=++tok;S.track=true;tstate='locating';gps={ok:false,acc:null};fixed=false;save();geoUI();
+ navigator.geolocation.getCurrentPosition(p=>{if(my!==tok)return;onFix(p);beginWatch(my)},e=>{if(my===tok)onGeoErr(e)},{enableHighAccuracy:true,timeout:20000,maximumAge:10000});
+}
+function beginWatch(my){
+ if(watchId!=null)navigator.geolocation.clearWatch(watchId);
+ watchId=navigator.geolocation.watchPosition(p=>{if(my===tok)onFix(p)},e=>{if(my!==tok)return;if(e.code===1)onGeoErr(e)},{enableHighAccuracy:true,maximumAge:4000,timeout:30000});
+}
+function stopTrack(quiet){
+ tok++;if(watchId!=null){try{navigator.geolocation.clearWatch(watchId)}catch(e){}watchId=null}
+ S.track=false;tstate='off';gps={ok:false,acc:null};if(gpsCircle){gpsCircle.remove();gpsCircle=null}
+ if(playerMk){const el=playerMk.getElement(),sv=el&&el.querySelector('svg');if(sv)sv.style.transform=''}
+ save();geoUI();if(!quiet)toast('Location tracking off');
 }
 function onFix(p){
  const c={lat:p.coords.latitude,lng:p.coords.longitude};
- gps={ok:true,acc:p.coords.accuracy,hd:p.coords.heading};
+ gps={ok:true,acc:p.coords.accuracy,hd:p.coords.heading};tstate='on';
  const far=miles(c,START)>40;
  if(far&&!S.off){S.off={lat:c.lat-START.lat,lng:c.lng-START.lng};shiftReqs(S.off.lat,S.off.lng);relabel();fixed=false;toast('Outside New York: requests placed around you')}
  else if(!far&&S.off){shiftReqs(-S.off.lat,-S.off.lng);S.off=null;relabel();fixed=false}
- if(busy)return;
+ if(busy){geoUI();return}
  S.pos=c;save();
  if(map){
   playerMk.setLatLng([c.lat,c.lng]);
   if(!gpsCircle)gpsCircle=L.circle([c.lat,c.lng],{radius:p.coords.accuracy,color:'#6fd3ff',weight:1,opacity:.6,fillColor:'#6fd3ff',fillOpacity:.1,interactive:false}).addTo(map);
   else{gpsCircle.setLatLng([c.lat,c.lng]);gpsCircle.setRadius(p.coords.accuracy)}
   const el=playerMk.getElement(),sv=el&&el.querySelector('svg');if(sv)sv.style.transform=(p.coords.heading!=null&&!isNaN(p.coords.heading))?'rotate('+p.coords.heading+'deg)':'';
-  if(!fixed){fixed=true;if(tab==='map'){map.setView([c.lat,c.lng],14,{animate:true});toast('Location found')}}
+  if(!fixed){fixed=true;if(tab==='map'){map.setView([c.lat,c.lng],14,{animate:true})}toast('Location found')}
   const now=Date.now();if(now-(onFix.t||0)>2500||!fixed){onFix.t=now;refreshMap();const l=$('#maplist');if(l&&tab==='map')l.innerHTML=listHTML()}
  }
+ geoUI();
 }
 function onGeoErr(e){
- if(e.code===1){if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null}S.track=false;toast('Location is blocked. Allow it in your browser settings.')}
- else toast('Can\'t get a GPS fix yet');
+ if(watchId!=null){try{navigator.geolocation.clearWatch(watchId)}catch(x){}watchId=null}
+ tok++;S.track=false;gps={ok:false,acc:null};
+ if(e&&e.code===1){tstate='denied';toast('Location is blocked')}
+ else{tstate='error';terr=e&&e.code===3?'Couldn\'t get a GPS fix in time. Try near a window or outside, then flip this switch again.':'Your location isn\'t available right now. Flip this switch to try again.';toast('Can\'t find your location')}
  save();geoUI();
 }
 function resumeTrack(){
  if(!S.track)return;
  const ask=navigator.permissions&&navigator.permissions.query?navigator.permissions.query({name:'geolocation'}):null;
- if(ask)ask.then(r=>{if(r.state==='granted')startTrack();else{S.track=false;save()}}).catch(()=>{S.track=false});else S.track=false;
+ if(ask)ask.then(r=>{if(r.state==='granted')startTrack();else{S.track=false;save()}}).catch(()=>startTrack());else startTrack();
 }
 
 /* ---------- report an incident ---------- */
@@ -398,6 +481,7 @@ document.addEventListener('click',e=>{
  if(t.closest('#mapwrap'))return;
  if(t.closest('#nav')){if(!busy){closeSheet();setTab(t.dataset.t)}return}
  if(t.dataset.ob!=null&&t.dataset.ob!==''){return obGo(+t.dataset.ob)}
+ if(t.dataset.am){return setAuthMode(t.dataset.am)}
  if(t.dataset.f){filter=t.dataset.f;return render()}
  if(t.dataset.l){const id=+t.dataset.l,was=S.liked.includes(id);S.liked=was?S.liked.filter(x=>x!==id):[...S.liked,id];buzz(15);const n=t.lastChild;if(n&&n.nodeType===3)n.nodeValue=(+n.nodeValue)+(was?-1:1);t.classList.toggle('on',!was);t.classList.remove('pop');void t.offsetWidth;if(!was)t.classList.add('pop');save();return}
  if(t.dataset.rt){readReport();F.ty=t.dataset.rt;F.err='';return renderReport()}
@@ -414,17 +498,18 @@ document.addEventListener('click',e=>{
   case'shut':return shoot();
   case'newscene':S.preview=null;return render();
   case'start':return finishSetup();
-  case'obh':return obHandle();
   case'obl':startTrack();return obGo(3);
   case'obs':return obGo(3);
-  case'trk':S.track?stopTrack():startTrack();return;
+  case'trk':return toggleTrack();
+  case'a-eye':{const h=$('#a-pw').type==='password';$('#a-pw').type=h?'text':'password';$('#a-pw2').type=h?'text':'password';t.textContent=h?'Hide':'Show';return}
+  case'logout':return logout();
+  case'delacct':return deleteAccount();
   case'hap':S.haptics=!S.haptics;buzz(20);return render();
   case'install':if(deferred){deferred.prompt();deferred=null;render()}return;
-  case'hsave':{const v=$('#hin').value.trim().replace(/[^a-zA-Z0-9_.]/g,''),er=$('#herr');if(!v){er.textContent='Handle can\'t be empty.';return}S.handle=v;toast('Handle saved');return render()}
   case'reset':if(confirm('Reset all progress? Your handle stays.')){const h=S.handle;S=fresh();S.handle=h;hide.clear();filter='all';if(map){playerMk.setLatLng([S.pos.lat,S.pos.lng]);map.setView([S.pos.lat,S.pos.lng],13)}render();toast('Progress reset')}return;
  }
 });
-document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.id==='hn0')obHandle()});
+document.addEventListener('submit',e=>{if(e.target.id==='af'){e.preventDefault();authSubmit()}});
 document.addEventListener('click',e=>{if(e.target.id==='scrim')closeSheet()});
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;if(tab==='me')render()});
 window.addEventListener('appinstalled',()=>{deferred=null;toast('FNSM installed')});

@@ -165,3 +165,22 @@ button{transition:transform .18s var(--ease),background .25s,color .25s,border-c
 .vin .shot svg,.vin>*{animation-fill-mode:both}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-delay:0s!important;transition-duration:.01ms!important}}
 #intro{background:#07080d}
+
+/* auth + switch */
+.obp.auth{justify-content:flex-start;padding-top:calc(40px + env(safe-area-inset-top));overflow-y:auto}
+.obp.auth>*{max-width:340px}
+.auth .kick{margin-bottom:2px}
+.auth input{text-align:left;margin-top:0}
+.fld{text-align:left;margin-bottom:12px}.fld label{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--mu);margin-bottom:6px}
+.su-only{display:grid;grid-template-rows:0fr;opacity:0;transition:grid-template-rows .5s var(--ease),opacity .35s}.su-only>div{overflow:hidden;min-height:0}.auth.su .su-only{grid-template-rows:1fr;opacity:1}
+.seg2{position:relative;display:grid;grid-template-columns:1fr 1fr;background:var(--p);border:1px solid var(--ln);margin:14px auto 18px}
+.seg2 .ind{position:absolute;top:0;bottom:0;left:0;width:50%;background:#2a0f15;border-bottom:2px solid var(--red);transition:transform .5s var(--ease)}.seg2[data-m=signup] .ind{transform:translateX(100%)}
+.seg2 button{position:relative;background:none;border:0;color:var(--mu);font:inherit;font-size:12px;letter-spacing:.18em;text-transform:uppercase;padding:13px;cursor:pointer}.seg2 button.on{color:#fff}
+.pw{position:relative}.pw input{padding-right:70px}.pw button{position:absolute;right:4px;top:4px;bottom:4px;background:none;border:0;color:var(--mu);font:inherit;font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:0 10px;cursor:pointer}
+.auth .err{text-align:left;min-height:16px}.auth .note{margin-top:14px;font-size:12px;line-height:1.4}
+#a-go:disabled{opacity:.7}
+.sw{flex:none;position:relative;width:52px;height:30px;border-radius:15px;background:#222a3d;border:1px solid var(--ln);cursor:pointer;padding:0;transition:background .35s var(--ease),border-color .35s}
+.sw i{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:#8a93ab;transition:transform .4s var(--ease),background .3s}
+.sw.on{background:#0f3a52;border-color:#6fd3ff}.sw.on i{transform:translateX(22px);background:#6fd3ff}
+.mu.warn{color:#ffb86b}
+#intro .auth input{text-align:left}
