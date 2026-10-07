@@ -27,15 +27,23 @@ function skyline(r,base,minH,maxH,fill,winP,x0=-10,x1=410,antenna=true){
  }
  return o;
 }
-function spidey(x,y,s,anchorX,anchorY,rot=0){
+function spidey(x,y,s,ax,ay,rot=0){
  return `<g transform="translate(${x} ${y}) rotate(${rot}) scale(${s})">
- <path d="M6 -14L${anchorX} ${anchorY}" stroke="#e9eef9" stroke-width="${R(.9/s)}" opacity=".85"/>
- <path d="M-4 6L-14 18L-8 26M2 6L10 16L22 12" stroke="#1d4cb0" stroke-width="5" stroke-linecap="round" fill="none"/>
- <path d="M-6 -12L8 -14L9 4L-2 8L-8 4Z" fill="#d6202f"/>
- <path d="M-1 -12V8M-5 -4H7" stroke="#101420" stroke-width=".8" opacity=".6"/>
- <path d="M-6 -10L-18 -2L-12 6M6 -13L8 -22" stroke="#d6202f" stroke-width="4.5" stroke-linecap="round" fill="none"/>
- <circle cx="1" cy="-17" r="5.5" fill="#d6202f"/><path d="M-2 -19L1 -17.5L-0.5 -15.5ZM4 -19L1.4 -17.4L3 -15.4Z" fill="#fff"/>
- <path d="M-4.5 -17H6.5" stroke="#101420" stroke-width=".5" opacity=".5"/></g>`;
+ <path d="M8 -37L${ax} ${ay}" stroke="#e9eef9" stroke-width="${R(.8/s)}" opacity=".9"/>
+ <path d="M-3 4L-14 15L-12 28" stroke="#1d3f9e" stroke-width="6.500" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+ <path d="M3 4L13 12L26 8" stroke="#1d3f9e" stroke-width="6.500" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+ <path d="M-3 4L-13 14" stroke="#4b73d8" stroke-width="1.400" stroke-linecap="round" opacity=".6"/>
+ <circle cx="-12" cy="29" r="3.600" fill="#c01526"/><circle cx="27" cy="8" r="3.600" fill="#c01526"/>
+ <path d="M-7 -17L-18 -8L-12 -1" stroke="#c01526" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+ <path d="M-8 -17Q0 -21 9 -19L7 5Q0 8 -5 6Z" fill="#d6202f"/><path d="M9 -19L7 5L3 6L5 -19Z" fill="#8f101c" opacity=".55"/>
+ <path d="M-5 5Q0 8 7 5L7 -2Q0 1 -5 -1Z" fill="#1d3f9e"/>
+ <path d="M-1 -15L0 -9L-1 -4M-4 -12L2 -10M-3 -7L3 -8M3 -14L2 -4" stroke="#fff" stroke-width="1.300" stroke-linecap="round" opacity=".92"/>
+ <path d="M7 -18L14 -27L9 -34" stroke="#d6202f" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" fill="none"/><circle cx="8.500" cy="-35" r="3.200" fill="#c01526"/>
+ <circle cx="1" cy="-26" r="6.600" fill="#d6202f"/>
+ <path d="M-4 -28L-0.400 -26.600L-1.400 -23.800Z M6 -28L2.400 -26.600L3.400 -23.800Z" fill="#fff" stroke="#101420" stroke-width=".6" stroke-linejoin="round"/>
+ <path d="M1 -32.600V-19.600M-5.500 -29Q1 -26 7.500 -29M-6 -24.500Q1 -22.500 8 -24.500M-3 -31L-1 -22M5 -31L3 -22" stroke="#101420" stroke-width=".5" opacity=".55" fill="none"/>
+ <path d="M7.600 -30Q9.400 -24 7.200 -19" stroke="#a9c8ff" stroke-width="1.100" opacity=".55" fill="none"/>
+ <path d="M-8 -16Q-9 -8 -6 4" stroke="#ff6a78" stroke-width=".9" opacity=".35" fill="none"/></g>`;
 }
 function flame(x,y,w,h,c){return `<path d="M${x} ${y}C${R(x-w)} ${R(y-h*.3)} ${R(x-w*.55)} ${R(y-h*.7)} ${x} ${R(y-h)}C${R(x+w*.1)} ${R(y-h*.6)} ${R(x+w*.95)} ${R(y-h*.5)} ${R(x+w*.6)} ${R(y-h*.12)}C${R(x+w*.5)} ${y} ${R(x+w*.2)} ${y} ${x} ${y}Z" fill="${c}"/>`}
 function cat(x,y,s){
@@ -106,7 +114,7 @@ function person(x,y,s,col,pose,extra=''){
   run:['M-2 -14L-11 -3L-14 0','M2 -14L9 -6L8 0','M-3 -29L-12 -20','M3 -29L11 -34'],
   grab:['M-3 -14L-6 0','M3 -14L7 0','M-3 -29L-8 -16','M3 -29L16 -30'],
   crouch:['M-3 -10L-9 0','M3 -10L9 0','M-3 -22L-9 -12','M3 -22L14 -14']}[pose]||[];
- return `<g transform="translate(${x} ${y}) scale(${s})"><g stroke="${col}" stroke-width="4.600" stroke-linecap="round" fill="none">${L.map(d=>`<path d="${d}"/>`).join('')}</g><path d="M0 -31V-14" stroke="${col}" stroke-width="9" stroke-linecap="round"/><circle cx="0" cy="-37" r="5.500" fill="${col}"/>${extra}</g>`;
+ return `<g transform="translate(${x} ${y}) scale(${s})"><g stroke="${col}" stroke-width="4.600" stroke-linecap="round" fill="none">${L.map(d=>`<path d="${d}"/>`).join('')}</g><path d="M0 -31V-14" stroke="${col}" stroke-width="9" stroke-linecap="round"/><circle cx="0" cy="-37" r="5.500" fill="${col}"/><path d="M-5 -39Q-2 -44 4 -42" stroke="#8fb6ff" stroke-width="1.100" fill="none" opacity=".55"/><path d="M4.500 -30V-16" stroke="#8fb6ff" stroke-width="1" opacity=".35"/>${extra}</g>`;
 }
 function bike(x,y,s,col){return `<g transform="translate(${x} ${y}) scale(${s})" stroke="${col}" stroke-width="1.800" fill="none"><circle cx="-14" cy="0" r="10"/><circle cx="14" cy="0" r="10"/><path d="M-14 0L-4 -14L8 -14L14 0M-4 -14L2 0L-14 0M8 -14L6 -20M2 -22H10M-6 -16H-2"/></g>`}
 function night(id,r,top,mid,bot,gx,gy,gc){return defs(id,top,mid,bot,gx,gy,gc)+stars(r,26,70)+skyline(r,150,50,120,'#0d1226',.25)}
@@ -264,9 +272,17 @@ function assist(seed){
  o+=spidey(224,70,1.25,300,-8,-6);
  return o;
 }
+function rain(r,n,op){let o='';for(let i=0;i<n;i++){const x=R(r()*420-10),y=R(r()*230);o+=`<path d="M${x} ${y}l-3 11" stroke="#bcd4ff" stroke-width=".7" opacity="${R(op*(.4+r()*.6))}"/>`}return o}
 function render(kind,seed,sub){
- const f={rescue,crime,fire,assist}[kind]||assist;
- return `<svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${kind} scene">${f(seed||1,sub)}</svg>`;
+ const f={rescue,crime,fire,assist}[kind]||assist,id=++uid,sd=seed||1,r=rng(sd*7+3);
+ const wet=kind==='crime'&&sub!=='graffiti'||kind==='assist';
+ const inner=f(sd,sub)+(wet?rain(r,70,.28):'');
+ return `<svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${kind} scene"><defs>
+ <filter id="bm${id}" x="0" y="0" width="100%" height="100%" color-interpolation-filters="sRGB"><feColorMatrix in="SourceGraphic" type="matrix" values="1.7 0 0 0 -.7  0 1.7 0 0 -.7  0 0 1.7 0 -.7  0 0 0 1 0" result="t"/><feGaussianBlur in="t" stdDeviation="4.500" result="b"/><feBlend in="SourceGraphic" in2="b" mode="screen"/></filter>
+ <filter id="gr${id}" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" seed="${sd%99}"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="table" tableValues="0 .11"/></feComponentTransfer></filter>
+ <radialGradient id="vg${id}" cx=".5" cy=".5" r=".72"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".62"/></radialGradient>
+ <linearGradient id="lt${id}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffb070" stop-opacity=".10"/><stop offset=".5" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#4da3ff" stop-opacity=".10"/></linearGradient></defs>
+ <g filter="url(#bm${id})">${inner}</g><rect width="400" height="240" fill="url(#lt${id})"/><rect width="400" height="240" filter="url(#gr${id})"/><rect width="400" height="240" fill="url(#vg${id})"/></svg>`;
 }
 return {render};
 })();
