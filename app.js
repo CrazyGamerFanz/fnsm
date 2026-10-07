@@ -5,7 +5,8 @@ const TYPES={
   rescue:{n:'Rescue',c:'#e8283c',k:'',tag:''},
   crime:{n:'Crime',c:'#4da3ff',k:'b',tag:'b'},
   fire:{n:'Hazard',c:'#f5a524',k:'a',tag:'a'},
-  assist:{n:'Assist',c:'#3dd68c',k:'g',tag:'g'}
+  assist:{n:'Assist',c:'#3dd68c',k:'g',tag:'g'},
+  other:{n:'Other',c:'#b86bff',k:'p',tag:'p'}
 };
 const POOL=[
  ['rescue','Stuck cat, 3rd Ave','Ginger tabby on a 4th floor fire escape. Owner is out of town and the cat is not coming down.','Harlem',120,40.8116,-73.9465,0],
@@ -33,7 +34,7 @@ const THREAT=[
  {n:'Critical',c:'#e8283c',m:2,d:'Life-threatening. Armed or spreading.'}
 ];
 const CRIMES=[['mugging','Mugging'],['bank','Robbery'],['chase','Chase'],['jewel','Smash and grab'],['package','Package theft'],['bike','Bike theft'],['graffiti','Vandalism']];
-const BASE={rescue:120,crime:120,fire:160,assist:80};
+const BASE={rescue:120,crime:120,fire:160,assist:80,other:100};
 const reward=(b,th)=>Math.round(b*THREAT[th].m/10)*10;
 const ZONES=[['Harlem',40.8116,-73.9465],['Midtown',40.7549,-73.9840],['Chelsea',40.7440,-73.9990],['Financial District',40.7092,-74.0060],['Williamsburg',40.7140,-73.9610],['Astoria',40.7644,-73.9235],['Central Park',40.7712,-73.9764]];
 const HANDLES=['mj_watson','tbolt_nyc','queensKid','bodega_betty','harlem_hawk','nyc_nightowl','ned_leeds','sunset_park','dumbo_dan','kitty_cat_kim'];
@@ -83,20 +84,21 @@ const GLYPH={
  rescue:'<path d="M5 4l3.500 3.500h7L19 4v9a7 7 0 01-14 0z" fill="#fff"/><circle cx="9.200" cy="12" r="1.300" fill="#07080d"/><circle cx="14.800" cy="12" r="1.300" fill="#07080d"/><path d="M11 15h2l-1 1.200z" fill="#07080d"/>',
  crime:'<path d="M12 2.500l7.500 3v5.500c0 5-3.200 8.500-7.500 10.500C7.700 19.500 4.500 16 4.500 11V5.500z" fill="#fff"/><path d="M12 7.500l1.400 2.900 3.100.4-2.300 2.100.6 3.100L12 14.500 9.200 16l.6-3.100-2.300-2.100 3.100-.4z" fill="#07080d"/>',
  fire:'<path d="M12.500 2c.5 4.200 6 6.200 6 12a6.500 6.500 0 01-13 0c0-3.200 2.200-4.600 3.200-7.500 1 .8 1.600 2 2 3.200C11.500 8 12.500 5 12.500 2z" fill="#fff"/><path d="M12 21a3.200 3.200 0 01-3.200-3.200c0-2 1.800-2.800 2.400-4.600 1.600 1.200 4 2.600 4 4.800A3.200 3.200 0 0112 21z" fill="#07080d"/>',
+other:'<path d="M12 2L22.500 20.500H1.500Z" fill="#fff"/><rect x="11" y="8.500" width="2" height="6.500" fill="#07080d"/><circle cx="12" cy="17.700" r="1.250" fill="#07080d"/>',
  assist:'<path d="M5.500 3.500h13a1.500 1.500 0 011.500 1.500v12H4V5a1.500 1.500 0 011.500-1.500z" fill="#fff"/><rect x="6" y="6" width="5" height="4.500" fill="#07080d"/><rect x="13" y="6" width="5" height="4.500" fill="#07080d"/><rect x="4" y="12.500" width="16" height="1.600" fill="#07080d"/><circle cx="8" cy="19" r="2" fill="#fff"/><circle cx="16" cy="19" r="2" fill="#fff"/>'
 };
 const BLUE='#2b7bff';
 function badge(ty,cx,cy,r){const c=TYPES[ty].c,k=r*2*.78,o=r*2*.11;return `<circle cx="${cx}" cy="${cy}" r="${r+1.600}" fill="#07080d"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="${c}"/><svg x="${cx-k/2}" y="${cy-k/2}" width="${k}" height="${k}" viewBox="0 0 24 24">${GLYPH[ty]}</svg>`}
 function bars(th,x,y,c){let o='';for(let i=0;i<4;i++){const h=4+i*2.4;o+=`<rect x="${x+i*3.6}" y="${y-h}" width="2.600" height="${h}" fill="${i<=th?c:'#3a4158'}"/>`}return o}
-function core(){return `<circle cx="32" cy="36" r="23.500" fill="#fff"/><circle cx="32" cy="36" r="21" fill="${BLUE}"/><circle cx="32" cy="36" r="16.500" fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="1"/><svg x="17" y="21" width="30" height="30" viewBox="0 0 40 40" style="color:#fff"><use href="#spider"/></svg>`}
-function ico(ty,s=44){return `<svg class="ico" viewBox="0 0 72 72" width="${s}" height="${s}">${core()}${badge(ty,53,54,10)}</svg>`}
+function core(){return `<circle cx="32" cy="36" r="24.500" fill="none" stroke="#6fd3ff" stroke-opacity=".3"/><circle cx="32" cy="36" r="21.500" fill="#0a1030" stroke="#6fd3ff" stroke-width="2.600"/><circle cx="32" cy="36" r="17.500" fill="none" stroke="#6fd3ff" stroke-opacity=".28"/><svg x="19" y="23" width="26" height="26" viewBox="0 0 40 40" style="color:#e6f8ff"><use href="#spider"/></svg>`}
+function ico(ty,s=44){return `<svg class="ico" viewBox="0 0 72 72" width="${s}" height="${s}">${core()}${badge(ty,52,53,8.500)}</svg>`}
 function thTag(th){const T=THREAT[th==null?1:th];return `<span class="th" style="--c:${T.c}"><i>${[0,1,2,3].map(i=>`<b class="${i<=th?'on':''}" style="height:${4+i*2}px"></b>`).join('')}</i>${T.n}</span>`}
 function header(){$('#lvl').textContent='LV '+lvl(S);$('#xp').style.width=((S.rep%500)/5)+'%';const c=$('#cnt');c.textContent=S.reqs.length||'';c.style.display=S.reqs.length?'':'none'}
 function nearest(){return S.reqs.slice().sort((a,b)=>miles(S.pos,a)-miles(S.pos,b))}
 
 /* ---------- views ---------- */
 function feedView(){
- const fl=[['all','All'],['rescue','Rescue'],['crime','Crime'],['fire','Hazard'],['assist','Assist']];
+ const fl=[['all','All'],['rescue','Rescue'],['crime','Crime'],['fire','Hazard'],['assist','Assist'],['other','Other']];
  const posts=S.posts.filter(p=>filter==='all'||p.ty===filter);
  return `<button class="btn ghost" id="feedrep" style="margin-bottom:12px">+ Report an incident</button><div class="chips">${fl.map(f=>`<button class="chip ${filter===f[0]?'on':''}" data-f="${f[0]}">${f[1]}</button>`).join('')}</div>`+
  (posts.map(p=>{const T=TYPES[p.ty],on=S.liked.includes(p.id);
@@ -144,8 +146,8 @@ function render(){
 function setTab(t){tab=t;document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));render();$('#view').scrollTop=0}
 
 /* ---------- map ---------- */
-function hexIcon(r,near){const T=THREAT[r.th==null?1:r.th],d=miles(S.pos,r);return L.divIcon({className:'mk',iconSize:[72,92],iconAnchor:[32,36],html:`<div class="mkp" style="--c:${T.c}"><svg viewBox="0 0 72 72" width="72" height="72">${(near||r.th===3)?`<circle class="pr" cx="32" cy="36" r="23" fill="none" stroke="${T.c}" stroke-width="2.500"/>`:''}${core()}${badge(r.ty,53,54,10)}${bars(r.th==null?1:r.th,50,21,T.c)}</svg><div class="dist">${d.toFixed(1)} MI</div></div>`})}
-function playerIcon(){return L.divIcon({className:'mk',iconSize:[34,34],iconAnchor:[17,17],html:'<div class="me"><i></i><svg viewBox="0 0 40 40" width="34" height="34"><circle cx="20" cy="20" r="15" fill="#07080d" stroke="#fff" stroke-width="2.500"/><use href="#spider" x="9" y="9" width="22" height="22" style="color:#e8283c"/></svg></div>'})}
+function hexIcon(r,near){const T=THREAT[r.th==null?1:r.th],d=miles(S.pos,r);return L.divIcon({className:'mk',iconSize:[72,92],iconAnchor:[32,36],html:`<div class="mkp" style="--c:${T.c}"><svg viewBox="0 0 72 72" width="72" height="72">${(near||r.th===3)?`<circle class="pr" cx="32" cy="36" r="23" fill="none" stroke="${T.c}" stroke-width="2.500"/>`:''}${core()}${badge(r.ty,52,53,8.500)}${bars(r.th==null?1:r.th,50,21,T.c)}</svg><div class="dist">${d.toFixed(1)} MI</div></div>`})}
+function playerIcon(){return L.divIcon({className:'mk',iconSize:[40,40],iconAnchor:[20,20],html:'<div class="me"><i></i><svg viewBox="0 0 40 40" width="40" height="40"><polygon points="20,3 34,33 20,26 6,33" fill="#fff" stroke="#6fd3ff" stroke-width="2.200" stroke-linejoin="round"/><polygon points="20,13 26,27 20,23 14,27" fill="#ff3fa4"/></svg></div>'})}
 function buildMapWrap(){
  mapWrap=document.createElement('div');mapWrap.id='mapwrap';
  mapWrap.innerHTML='<div id="map" style="position:absolute;inset:0"></div><div class="hudL" id="hudL"></div><div class="hudR"><button id="bz" title="Zones">ZONES</button><button id="br" title="Radar">RADAR</button><button id="bc" title="Recenter">CENTER</button><button id="brp" class="rp">+ REPORT</button></div><div class="hudB" id="hudB"></div>';
@@ -180,7 +182,7 @@ function refreshMap(){
  });
  if(showZones)ZONES.forEach(z=>{
   const rs=S.reqs.filter(r=>Math.hypot(r.lat-z[1],r.lng-z[2])<.022),n=rs.length,mx=n?Math.max(...rs.map(r=>r.th==null?1:r.th)):-1,c=n?THREAT[mx].c:'#3dd68c';
-  L.circle([z[1],z[2]],{radius:1100,color:c,weight:1.2,opacity:.7,fillColor:c,fillOpacity:n?.12+mx*.03:.05,interactive:false}).addTo(layers.zones)
+  L.circle([z[1],z[2]],{radius:1100,color:'#ff3fa4',weight:1.6,opacity:.8,fillColor:n?c:'#8a5bff',fillOpacity:n?.10+mx*.03:.06,interactive:false}).addTo(layers.zones)
    .bindTooltip(z[0]+' · '+(n?THREAT[mx].n:'Calm'),{permanent:true,direction:'center',className:'zt',interactive:false});
  });
  if(showRadar){
@@ -233,7 +235,7 @@ function swing(){
 }
 function finish(r){
  const before=lvl(S);
- S.rep+=r.rw;S.helped++;S.byType[r.ty]++;S.pos={lat:r.lat,lng:r.lng};
+ S.rep+=r.rw;S.helped++;S.byType[r.ty]=(S.byType[r.ty]||0)+1;S.pos={lat:r.lat,lng:r.lng};
  S.reqs=S.reqs.filter(x=>x.id!==r.id);
  const quote=THANKS[Math.random()*THANKS.length|0];
  S.posts.unshift({id:Date.now(),h:r.by,loc:r.loc,t:'Spider-Man handled it: '+r.t+'. '+quote,tag:'Resolved',ty:r.ty,sub:r.sub,l:Math.random()*900+100|0,ts:Date.now(),sd:r.sd});
@@ -289,14 +291,14 @@ function openReport(){
 function readReport(){const t=$('#rtitle'),d=$('#rdesc');if(t)F.title=t.value;if(d)F.desc=d.value}
 function renderReport(){
  const el=$('#report');if(!el||!F)return;
- const kinds=[['rescue','Rescue'],['crime','Crime'],['fire','Hazard'],['assist','Assist']];
+ const kinds=[['rescue','Rescue'],['crime','Crime'],['fire','Hazard'],['assist','Assist'],['other','Other']];
  const base=reward(BASE[F.ty],F.th==null?0:F.th);
  el.innerHTML=`<div class="rp-in"><div class="row sp"><h2 style="margin:0">Report an incident</h2><button class="like" id="rcancel">Cancel</button></div>
  <div class="mu" style="margin:6px 0 12px">Location: ${F.loc} · map center</div>
  <div class="shot" style="height:150px">${scene(F.ty,7,F.ty==='crime'?F.sub:undefined)}</div>
- <div class="lab">What's happening</div><div class="seg">${kinds.map(k=>`<button class="chip ${F.ty===k[0]?'on':''}" data-rt="${k[0]}">${k[1]}</button>`).join('')}</div>
+ <div class="lab">What's happening</div><div class="seg wrap">${kinds.map(k=>`<button class="chip ${F.ty===k[0]?'on':''}" data-rt="${k[0]}">${k[1]}</button>`).join('')}</div>
  ${F.ty==='crime'?`<div class="lab">Type of crime</div><div class="seg wrap">${CRIMES.map(k=>`<button class="chip ${F.sub===k[0]?'on':''}" data-rs="${k[0]}">${k[1]}</button>`).join('')}</div>`:''}
- <div class="lab">Title</div><input id="rtitle" maxlength="48" placeholder="${F.ty==='crime'?(CRIMES.find(k=>k[0]===F.sub)||[0,'Incident'])[1]+' in progress':'Short description of the problem'}" value="${F.title.replace(/"/g,'&quot;')}" autocomplete="off">
+ <div class="lab">${F.ty==='other'?'Describe it (required)':'Title'}</div><input id="rtitle" maxlength="48" placeholder="${F.ty==='other'?'e.g. Strange glowing device on a roof':F.ty==='crime'?(CRIMES.find(k=>k[0]===F.sub)||[0,'Incident'])[1]+' in progress':'Short description of the problem'}" value="${F.title.replace(/"/g,'&quot;')}" autocomplete="off">
  <div class="lab">Details</div><textarea id="rdesc" maxlength="160" rows="2" placeholder="Who, what, which way they went">${F.desc.replace(/</g,'&lt;')}</textarea>
  <div class="lab">Threat level</div>
  <div class="ths">${THREAT.map((T,i)=>`<button class="thb ${F.th===i?'on':''}" data-rth="${i}" style="--c:${T.c}"><span class="thi">${[0,1,2,3].map(j=>`<b class="${j<=i?'on':''}" style="height:${5+j*3}px"></b>`).join('')}</span><span class="tn">${T.n}</span><span class="td">${T.d}</span><span class="tm">x${T.m}</span></button>`).join('')}</div>
@@ -306,9 +308,10 @@ function renderReport(){
 }
 function submitReport(){
  readReport();
+ if(F.ty==='other'&&!F.title.trim()){F.err='Describe what\'s happening.';renderReport();$('#report').scrollTop=9999;return}
  if(F.th==null){F.err='Select a threat level.';renderReport();$('#report').scrollTop=9999;return}
  const kindName=F.ty==='crime'?(CRIMES.find(k=>k[0]===F.sub)||[0,'Incident'])[1]:null;
- const title=F.title.trim()||(kindName?kindName+' in progress':({rescue:'Someone needs rescuing',fire:'Hazard reported',assist:'Help needed'})[F.ty]);
+ const title=F.title.trim()||(kindName?kindName+' in progress':({rescue:'Someone needs rescuing',fire:'Hazard reported',assist:'Help needed',other:'Incident reported'})[F.ty]);
  const desc=F.desc.trim()||'Reported by @'+S.handle+'.';
  const r={id:S.id++,k:-1,ty:F.ty,t:title,d:desc,loc:F.loc,rw:reward(BASE[F.ty],F.th),th:F.th,sub:F.ty==='crime'?F.sub:undefined,lat:F.lat,lng:F.lng,by:S.handle,mine:1,ts:Date.now(),sd:Math.random()*9999|0};
  S.reqs.push(r);S.rep+=15;

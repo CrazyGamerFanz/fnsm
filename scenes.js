@@ -227,6 +227,21 @@ function bikes(seed){
 const CRIME={jewel,mugging,bank,chase,graffiti,package:pkg,bike:bikes};
 function crime(seed,sub){return (CRIME[sub]||jewel)(seed)}
 
+function other(seed){
+ const id=++uid,r=rng(seed);
+ let o=defs(id,'#0b0c24','#1d1a48','#3a2050','.5','.6','#b86bff');
+ o+=stars(r,40,70)+skyline(r,150,40,120,'#12142e',.3)+skyline(r,172,28,70,'#0c0e22',.25);
+ o+=`<rect x="0" y="172" width="400" height="68" fill="#0d0f1e"/><rect x="0" y="172" width="400" height="5" fill="#2a2f50"/><path d="M0 214H400" stroke="#3a3f60" stroke-width="2" stroke-dasharray="22 16"/>`;
+ o+=`<path d="M200 60L252 112L200 164L148 112Z" fill="#f5a524"/><path d="M200 68L244 112L200 156L156 112Z" fill="none" stroke="#2a1a05" stroke-width="3"/><rect x="195" y="90" width="10" height="34" rx="3" fill="#2a1a05"/><circle cx="200" cy="136" r="6" fill="#2a1a05"/>`;
+ o+=`<rect x="196" y="164" width="8" height="14" fill="#3a3f60"/><circle cx="200" cy="112" r="70" fill="#f5a524" opacity=".16" filter="url(#bl${id})"/>`;
+ for(const [x,c] of [[96,'#ff7a1a'],[110,'#ff7a1a'],[290,'#ff7a1a']])o+=`<g transform="translate(${x} 200)"><path d="M0 0L6 -20L12 0Z" fill="${c}"/><path d="M2 -9H10" stroke="#fff" stroke-width="2.500"/></g>`;
+ o+=`<path d="M60 196H140M270 196H340" stroke="#e9edf6" stroke-width="3" stroke-dasharray="10 6"/>`;
+ o+=person(70,208,1.5,'#1b2038','up')+person(330,208,1.5,'#1b2038','stand')+person(352,212,1.35,'#222844','grab')+person(52,214,1.3,'#242a4a','stand');
+ o+=`<circle cx="200" cy="40" r="3" fill="#b86bff"/><path d="M200 44L168 170H232Z" fill="#b86bff" opacity=".07"/>`;
+ o+=spidey(120,60,1.25,60,-10,-12);
+ return o;
+}
+
 function fire(seed){
  const id=++uid,r=rng(seed);
  let o=defs(id,'#1a0c14','#3a1418','#7a2a14','.5','.7','#ff8a2a');
@@ -274,7 +289,7 @@ function assist(seed){
 }
 function rain(r,n,op){let o='';for(let i=0;i<n;i++){const x=R(r()*420-10),y=R(r()*230);o+=`<path d="M${x} ${y}l-3 11" stroke="#bcd4ff" stroke-width=".7" opacity="${R(op*(.4+r()*.6))}"/>`}return o}
 function render(kind,seed,sub){
- const f={rescue,crime,fire,assist}[kind]||assist,id=++uid,sd=seed||1,r=rng(sd*7+3);
+ const f={rescue,crime,fire,assist,other}[kind]||assist,id=++uid,sd=seed||1,r=rng(sd*7+3);
  const wet=kind==='crime'&&sub!=='graffiti'||kind==='assist';
  const inner=f(sd,sub)+(wet?rain(r,70,.28):'');
  return `<svg viewBox="0 0 400 240" preserveAspectRatio="xMidYMid slice" role="img" aria-label="${kind} scene"><defs>
