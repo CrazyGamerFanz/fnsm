@@ -54,7 +54,7 @@ h2{font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--mu);
 #mapwrap{position:relative;height:46vh;min-height:300px;border:1px solid var(--ln);margin-bottom:12px;background:#0a0d15}
 #map{position:absolute;inset:0;background:#0a0d15}.leaflet-container{font-family:inherit;background:#0a0d15}
 .leaflet-control-attribution{background:#07080dcc!important;color:#6b7390!important;font-size:9px!important}.leaflet-control-attribution a{color:#8a93ab!important}
-.mk{background:none;border:0}.mkp{filter:drop-shadow(0 0 6px var(--c));animation:bob 2.4s ease-in-out infinite}.mkp svg{display:block}
+.mk{background:none;border:0}.mkp{filter:drop-shadow(0 0 7px var(--c))}.mkp .pr{transform-box:fill-box;transform-origin:center;animation:rip 1.8s infinite}.mkp svg{display:block}
 @keyframes bob{50%{transform:translateY(-3px)}}
 .me{position:relative;width:34px;height:34px}.me i{position:absolute;inset:-8px;border-radius:50%;border:2px solid #fff;opacity:0;animation:rip 2s infinite}.me svg{position:relative;display:block;filter:drop-shadow(0 0 6px #fff)}
 @keyframes rip{0%{transform:scale(.6);opacity:.8}100%{transform:scale(1.7);opacity:0}}

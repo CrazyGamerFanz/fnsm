@@ -67,7 +67,13 @@ function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clea
 function buzz(n){try{S.haptics&&navigator.vibrate&&navigator.vibrate(n)}catch(e){}}
 function ini(h){return(h||'?').slice(0,2).toUpperCase()}
 function scene(ty,sd){return Scenes.render(ty,sd)}
-function ico(ty,s=38){const c=TYPES[ty].c;return `<svg class="ico" viewBox="0 0 40 40" width="${s}" height="${s}"><polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="${c}26" stroke="${c}" stroke-width="2"/><use href="#spider" x="9" y="9" width="22" height="22" style="color:${c}"/></svg>`}
+const GLYPH={
+ rescue:'<path d="M5 4l3.500 3.500h7L19 4v9a7 7 0 01-14 0z" fill="#fff"/><circle cx="9.200" cy="12" r="1.300" fill="#07080d"/><circle cx="14.800" cy="12" r="1.300" fill="#07080d"/><path d="M11 15h2l-1 1.200z" fill="#07080d"/>',
+ crime:'<path d="M12 2.500l7.500 3v5.500c0 5-3.200 8.500-7.500 10.500C7.700 19.500 4.500 16 4.500 11V5.500z" fill="#fff"/><path d="M12 7.500l1.400 2.900 3.100.4-2.300 2.100.6 3.100L12 14.500 9.200 16l.6-3.100-2.300-2.100 3.100-.4z" fill="#07080d"/>',
+ fire:'<path d="M12.500 2c.5 4.200 6 6.200 6 12a6.500 6.500 0 01-13 0c0-3.200 2.200-4.600 3.200-7.500 1 .8 1.600 2 2 3.200C11.500 8 12.500 5 12.500 2z" fill="#fff"/><path d="M12 21a3.200 3.200 0 01-3.200-3.200c0-2 1.800-2.800 2.400-4.600 1.600 1.200 4 2.600 4 4.800A3.200 3.200 0 0112 21z" fill="#07080d"/>',
+ assist:'<path d="M5.500 3.500h13a1.500 1.500 0 011.500 1.500v12H4V5a1.500 1.500 0 011.500-1.500z" fill="#fff"/><rect x="6" y="6" width="5" height="4.500" fill="#07080d"/><rect x="13" y="6" width="5" height="4.500" fill="#07080d"/><rect x="4" y="12.500" width="16" height="1.600" fill="#07080d"/><circle cx="8" cy="19" r="2" fill="#fff"/><circle cx="16" cy="19" r="2" fill="#fff"/>'
+};
+function ico(ty,s=40){const c=TYPES[ty].c;return `<svg class="ico" viewBox="0 0 40 40" width="${s}" height="${s}"><circle cx="20" cy="20" r="17" fill="#07080d" stroke="${c}" stroke-width="2.500"/><circle cx="20" cy="20" r="19" fill="none" stroke="${c}" stroke-opacity=".3"/><svg x="9" y="9" width="22" height="22" viewBox="0 0 24 24">${GLYPH[ty]}</svg></svg>`}
 function header(){$('#lvl').textContent='LV '+lvl(S);$('#xp').style.width=((S.rep%500)/5)+'%';const c=$('#cnt');c.textContent=S.reqs.length||'';c.style.display=S.reqs.length?'':'none'}
 function nearest(){return S.reqs.slice().sort((a,b)=>miles(S.pos,a)-miles(S.pos,b))}
 
@@ -120,7 +126,7 @@ function render(){
 function setTab(t){tab=t;document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));render();$('#view').scrollTop=0}
 
 /* ---------- map ---------- */
-function hexIcon(r){const c=TYPES[r.ty].c;return L.divIcon({className:'mk',iconSize:[40,40],iconAnchor:[20,20],html:`<div class="mkp" style="--c:${c}"><svg viewBox="0 0 40 40" width="40" height="40"><polygon points="20,2 36,11 36,29 20,38 4,29 4,11" fill="#07080d" stroke="${c}" stroke-width="2.500"/><use href="#spider" x="9" y="9" width="22" height="22" style="color:${c}"/></svg></div>`})}
+function hexIcon(r,near){const c=TYPES[r.ty].c;return L.divIcon({className:'mk',iconSize:[48,58],iconAnchor:[24,54],html:`<div class="mkp" style="--c:${c}"><svg viewBox="0 0 48 58" width="48" height="58">${near?`<circle class="pr" cx="24" cy="24" r="22" fill="none" stroke="${c}" stroke-width="2"/>`:''}<circle cx="24" cy="24" r="22" fill="none" stroke="${c}" stroke-opacity=".3" stroke-width="1.500"/><path d="M15 38L24 54L33 38Z" fill="${c}"/><circle cx="24" cy="24" r="18" fill="#07080d" stroke="${c}" stroke-width="3"/><circle cx="24" cy="24" r="14.500" fill="none" stroke="#fff" stroke-opacity=".12"/><svg x="11" y="11" width="26" height="26" viewBox="0 0 24 24">${GLYPH[r.ty]}</svg><circle cx="24" cy="54" r="2" fill="#fff"/></svg></div>`})}
 function playerIcon(){return L.divIcon({className:'mk',iconSize:[34,34],iconAnchor:[17,17],html:'<div class="me"><i></i><svg viewBox="0 0 40 40" width="34" height="34"><circle cx="20" cy="20" r="15" fill="#07080d" stroke="#fff" stroke-width="2.500"/><use href="#spider" x="9" y="9" width="22" height="22" style="color:#e8283c"/></svg></div>'})}
 function buildMapWrap(){
  mapWrap=document.createElement('div');mapWrap.id='mapwrap';
@@ -148,8 +154,9 @@ function refreshMap(){
  if(!map)return;
  layers.req.clearLayers();layers.zones.clearLayers();layers.radar.clearLayers();
  playerMk.setLatLng([S.pos.lat,S.pos.lng]);
+ const nid=(nearest()[0]||{}).id;
  S.reqs.forEach(r=>{if(hide.has(r.ty))return;
-  const m=L.marker([r.lat,r.lng],{icon:hexIcon(r)}).addTo(layers.req);
+  const m=L.marker([r.lat,r.lng],{icon:hexIcon(r,r.id===nid)}).addTo(layers.req);
   m.on('click',e=>{L.DomEvent.stopPropagation(e);if(!busy)openSheet(r.id)});
  });
  if(showZones)ZONES.forEach(z=>{
