@@ -62,7 +62,7 @@ let S=load();
 let tab='feed',filter='all',sel=null,busy=false,hide=new Set(),showZones=true,showRadar=true,deferred=null;
 let map,mk,mapWrap,layers={},playerMk,routePts=null,routeLine=null;
 
-function fresh(){const s={v:2,handle:'',rep:0,helped:0,photos:0,byType:{rescue:0,crime:0,fire:0,assist:0},liked:[],haptics:true,pos:{...START},track:false,off:null,posts:[],reqs:[],id:100,preview:null};
+function fresh(){const s={v:2,alerts:true,lastSeen:0,handle:'',rep:0,helped:0,photos:0,byType:{rescue:0,crime:0,fire:0,assist:0},liked:[],haptics:true,pos:{...START},track:false,off:null,posts:[],reqs:[],id:100,preview:null};
  const n=Date.now();s.posts=SEED_POSTS.map((p,i)=>({id:i+1,h:p[0],loc:p[1],t:p[2],tag:p[3],ty:p[4],l:p[5],ts:n-p[6]*60000,sd:i*31+7,sub:p[7]}));
  for(let i=0;i<5;i++)spawn(s);return s}
 function parseState(raw){const s=JSON.parse(raw);if(s&&s.v===2){s.reqs.forEach(r=>{if(r.th==null){const q=POOL[r.k];r.th=q?q[7]:1;r.sub=r.sub||(q&&q[8])}});s.posts.forEach(p=>{if(p.ty==='crime'&&!p.sub)p.sub=CRIMES[p.sd%CRIMES.length][0]});return s}return null}
@@ -76,8 +76,8 @@ function spawn(s){
  const have=new Set(s.reqs.map(r=>r.k)),opts=POOL.map((_,i)=>i).filter(i=>!have.has(i));
  if(!opts.length)return false;
  const k=opts[Math.random()*opts.length|0],q=POOL[k];
- s.reqs.push({id:s.id++,k,ty:q[0],t:q[1],d:q[2],loc:s.off?'Your area':q[3],rw:reward(q[4],q[7]),th:q[7],sub:q[8],lat:q[5]+(s.off?s.off.lat:0),lng:q[6]+(s.off?s.off.lng:0),by:HANDLES[Math.random()*HANDLES.length|0],ts:Date.now()-(Math.random()*18+1)*60000,sd:k*13+s.id});
- return true;
+ const nr={id:s.id++,k,ty:q[0],t:q[1],d:q[2],loc:s.off?'Your area':q[3],rw:reward(q[4],q[7]),th:q[7],sub:q[8],lat:q[5]+(s.off?s.off.lat:0),lng:q[6]+(s.off?s.off.lng:0),by:HANDLES[Math.random()*HANDLES.length|0],ts:Date.now()-(Math.random()*18+1)*60000,sd:k*13+s.id};s.reqs.push(nr);
+ return nr;
 }
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('on'),2000)}
 function buzz(n){try{S.haptics&&navigator.vibrate&&navigator.vibrate(n)}catch(e){}}
@@ -144,6 +144,7 @@ function meView(){
  ${installBlock()}
  ${accountCard()}
  ${trackCard()}
+ ${alertCard()}
  <div class="card"><div class="row sp"><span class="hn">Vibration</span><button class="chip ${S.haptics?'on':''}" id="hap">${S.haptics?'On':'Off'}</button></div></div>
  <button class="btn ghost" id="reset" style="margin-top:8px">Reset progress</button>`;
 }
@@ -303,17 +304,85 @@ function intro(){
   <div class="mu note">${legacy?'Your existing progress on this device will move to your new account.':'Accounts are stored on this device.'}</div>
   <button class="lnk" data-ob="0">Back</button></section>
  <section class="obp"><div class="kick">Last steps</div><div class="radar"><i></i><i></i><i></i><svg viewBox="0 0 40 40"><use href="#spider"/></svg></div><h1>Let Spider-Man find you</h1><p class="lead">Turn on location so requests appear around you and your marker follows you on the map. It stays on your device.</p><button class="btn" id="obl">Enable location</button><button class="lnk" id="obs">Not now</button></section>
+ <section class="obp"><div class="kick">Stay ahead</div><div class="sirenic"><svg viewBox="0 0 52 52"><path d="M10 38V28a16 16 0 0132 0v10M6 42h40M26 6v5M8 14l4 3M44 14l-4 3" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg></div><h1>Threat alerts</h1><p class="lead">Get an alert the moment a High or Critical threat shows up near you.</p><button class="btn" id="oba">Turn on alerts</button><button class="lnk" id="obn">Not now</button></section>
  <section class="obp"><div class="kick">All done</div><div class="check"><svg viewBox="0 0 52 52"><circle cx="26" cy="26" r="24"/><path d="M15 27l8 8 14-16"/></svg></div><h1>You're all set</h1><p class="lead" id="obsum"></p><button class="btn" id="start">Start patrol</button></section>
- </div><div class="dots" id="dots"><i class="on"></i><i></i><i></i><i></i></div></div>`;
+ </div><div class="dots" id="dots"><i class="on"></i><i></i><i></i><i></i><i></i></div></div>`;
 }
 function obGo(n){
  ob.step=n;$('#obt').style.transform='translateX('+(-n*100)+'%)';
  document.querySelectorAll('#intro .obp').forEach((p,i)=>p.classList.toggle('on',i===n));
  document.querySelectorAll('#dots i').forEach((d,i)=>d.classList.toggle('on',i<=n));
  if(n===1)setTimeout(()=>{const i=$('#a-id');if(i&&ob.step===1)i.focus({preventScroll:true})},560);
- if(n===3)$('#obsum').innerHTML='Signed in as <b>@'+S.handle+'</b><br>Location '+(tstate==='on'||tstate==='locating'?'on':'off. You can turn it on from the map or Profile.');
+ if(n===4)$('#obsum').innerHTML='Signed in as <b>@'+S.handle+'</b><br>Location '+(tstate==='on'||tstate==='locating'?'on':'off')+' · Alerts '+(S.alerts===false?'off':'on')+'<br><span class="mu">Change these anytime in Profile.</span>';
 }
+async function enableAlertsThenNext(){S.alerts=true;save();await askNotif();obGo(4)}
 function finishSetup(){save();buzz(30);render();leaveIntro()}
+
+/* ---------- threat alerts ---------- */
+let alertQ=[],alertBusy=false,ahide=null;
+function distLabel(r){return miles(S.pos,r).toFixed(1)+' mi'}
+function showAlert(r){alertQ.push(r);if(!alertBusy)nextAlert()}
+function nextAlert(){
+ const r=alertQ.shift();if(!r){alertBusy=false;return}
+ alertBusy=true;const T=THREAT[r.th],el=$('#alert');
+ el.style.setProperty('--c',T.c);el.className='on'+(r.th===3?' crit':'');el.dataset.id=r.id;
+ el.innerHTML=`<div class="aic">${ico(r.ty,36)}</div><div class="atx"><div class="ak">${T.n} threat · ${TYPES[r.ty].n}</div><div class="at">${r.t}</div><div class="am">${r.loc} · ${distLabel(r)} · +${r.rw} rep</div></div><div class="abt"><button id="aview">View</button><button id="aclose" aria-label="Dismiss">×</button></div>`;
+ buzz(r.th===3?[120,60,120,60,240]:[100,50,100]);
+ clearTimeout(ahide);ahide=setTimeout(hideAlert,7000);
+}
+function hideAlert(){clearTimeout(ahide);const el=$('#alert');el.classList.remove('on');setTimeout(()=>{alertBusy=false;nextAlert()},450)}
+function openFromAlert(id){
+ const r=S.reqs.find(x=>String(x.id)===String(id));
+ if(!r){toast('That request is no longer active');return}
+ closeSheet();setTab('map');setTimeout(()=>openSheet(r.id),650);
+}
+const notifOK=()=>('Notification' in window)&&Notification.permission==='granted';
+function sysNotify(r,force){
+ if(!notifOK()||S.alerts===false)return;
+ if(!force&&!document.hidden)return;
+ const T=THREAT[r.th],title=T.n.toUpperCase()+' THREAT · '+TYPES[r.ty].n;
+ const opts={body:r.t+'\n'+r.loc+' · '+distLabel(r)+' · +'+r.rw+' rep',icon:'icon-192.png',badge:'icon-192.png',tag:'fnsm-'+r.id,renotify:true,vibrate:r.th===3?[200,100,200,100,300]:[150,80,150],requireInteraction:r.th===3,data:{id:r.id}};
+ const fallback=()=>{try{new Notification(title,opts)}catch(e){}};
+ if(navigator.serviceWorker&&navigator.serviceWorker.ready)navigator.serviceWorker.ready.then(reg=>reg.showNotification(title,opts)).catch(fallback);else fallback();
+}
+function alertNew(r){if(!r||r.mine||r.th<2||S.alerts===false)return false;if(document.hidden)sysNotify(r);else showAlert(r);return true}
+function alertStatus(){
+ const sup='Notification' in window,perm=sup?Notification.permission:'unsupported',ios=/iPhone|iPad|iPod/i.test(navigator.userAgent),sa=matchMedia('(display-mode: standalone)').matches||navigator.standalone;
+ if(S.alerts===false)return 'Off. You won\'t be told about High or Critical threats.';
+ if(perm==='granted')return 'On. Banner, vibration and phone notifications for High and Critical threats while FNSM is running.';
+ if(perm==='denied')return 'Banner and vibration alerts are on. Phone notifications are blocked in your browser settings.';
+ if(ios&&!sa)return 'Banner and vibration alerts are on. For phone notifications on iPhone, add FNSM to your Home Screen first.';
+ if(!sup)return 'Banner and vibration alerts are on. Phone notifications aren\'t supported here.';
+ return 'Banner and vibration alerts are on. Tap Allow to get phone notifications too.';
+}
+function alertChips(){const on=S.alerts!==false,perm=('Notification' in window)?Notification.permission:'unsupported';return (on&&perm==='default'?'<button class="chip on" id="alallow">Allow notifications</button>':'')+(on?'<button class="chip" id="altest">Send test alert</button>':'')}
+function alertCard(){const on=S.alerts!==false;return `<div class="card" id="alcard"><div class="row sp" style="gap:14px"><div style="flex:1;min-width:0"><div class="hn">Threat alerts</div><div class="mu" id="alst" style="margin-top:3px;line-height:1.45">${alertStatus()}</div></div><button class="sw${on?' on':''}" id="alsw" role="switch" aria-checked="${on}" aria-label="Threat alerts"><i></i></button></div><div class="row" id="alchips" style="gap:8px;margin-top:${on?12:0}px">${alertChips()}</div></div>`}
+function updateAlertCard(){
+ const on=S.alerts!==false,sw=$('#alsw');if(sw){sw.classList.toggle('on',on);sw.setAttribute('aria-checked',on)}
+ const st=$('#alst');if(st)st.textContent=alertStatus();const ch=$('#alchips');if(ch){ch.innerHTML=alertChips();ch.style.marginTop=on?'12px':'0'}
+}
+async function askNotif(){
+ if(!('Notification' in window))return;
+ if(Notification.permission==='default'){try{await Notification.requestPermission()}catch(e){}}
+ updateAlertCard();
+}
+async function toggleAlerts(){
+ if(S.alerts===false){S.alerts=true;save();updateAlertCard();await askNotif()}
+ else{S.alerts=false;save();hideAlert();updateAlertCard()}
+}
+function testAlert(){
+ const r={id:'test'+Date.now(),ty:'crime',th:3,t:'Test alert: armed bank robbery',loc:'Wall St',rw:300,lat:S.pos.lat+.004,lng:S.pos.lng+.004,mine:0};
+ showAlert(r);if(notifOK())sysNotify(r,true);
+}
+function catchUp(){
+ if(!acct||!S.handle)return;
+ const away=Date.now()-(S.lastSeen||Date.now());S.lastSeen=Date.now();
+ if(away<4*60000){save();return}
+ const n=Math.min(3,Math.floor(away/(8*60000))+1);let first=null,got=0;
+ for(let i=0;i<n;i++){const r=spawn(S);if(r){got++;if(r.th>=2&&!first)first=r}}
+ save();header();if(tab==='map'){refreshMap();const l=$('#maplist');if(l)l.innerHTML=listHTML()}
+ if(got){if(first&&S.alerts!==false)showAlert(first);else toast(got+' new request'+(got>1?'s':'')+' while you were away')}
+}
 
 /* ---------- accounts (stored on this device) ---------- */
 const b64e=u=>btoa(String.fromCharCode(...u)),b64d=t=>Uint8Array.from(atob(t),c=>c.charCodeAt(0));
@@ -501,6 +570,13 @@ document.addEventListener('click',e=>{
   case'obl':startTrack();return obGo(3);
   case'obs':return obGo(3);
   case'trk':return toggleTrack();
+  case'alsw':return toggleAlerts();
+  case'alallow':return askNotif();
+  case'altest':return testAlert();
+  case'aview':{const id=$('#alert').dataset.id;hideAlert();return openFromAlert(id)}
+  case'aclose':return hideAlert();
+  case'oba':return enableAlertsThenNext();
+  case'obn':return obGo(4);
   case'a-eye':{const h=$('#a-pw').type==='password';$('#a-pw').type=h?'text':'password';$('#a-pw2').type=h?'text':'password';t.textContent=h?'Hide':'Show';return}
   case'logout':return logout();
   case'delacct':return deleteAccount();
@@ -515,8 +591,13 @@ window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;
 window.addEventListener('appinstalled',()=>{deferred=null;toast('FNSM installed')});
 setInterval(()=>{
  if(busy||!S.handle)return;
- if(spawn(S)){save();header();toast('New request nearby');if(tab==='map'){refreshMap();const l=$('#maplist');if(l)l.innerHTML=listHTML()}}
+ const r=spawn(S);
+ if(r){S.lastSeen=Date.now();save();header();if(!alertNew(r)&&!document.hidden)toast('New request nearby');if(tab==='map'){refreshMap();const l=$('#maplist');if(l)l.innerHTML=listHTML()}}
+ else S.lastSeen=Date.now();
 },40000);
+document.addEventListener('visibilitychange',()=>{if(document.hidden){S.lastSeen=Date.now();save()}else catchUp()});
+if('serviceWorker'in navigator)navigator.serviceWorker.addEventListener('message',e=>{if(e.data&&e.data.type==='open')openFromAlert(e.data.id)});
 if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
-intro();render();resumeTrack();
+intro();render();resumeTrack();catchUp();
+try{const q=new URLSearchParams(location.search).get('open');if(q)setTimeout(()=>openFromAlert(q),1800)}catch(e){}
 })();

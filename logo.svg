@@ -1,13 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
 <defs>
 <radialGradient id="bg" cx="50%" cy="42%" r="75%"><stop offset="0" stop-color="#ff3b4d"/><stop offset=".55" stop-color="#d11a2c"/><stop offset="1" stop-color="#6e0a16"/></radialGradient>
-<linearGradient id="sp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#171a26"/><stop offset="1" stop-color="#05060a"/></linearGradient>
-<g id="leg"><path d="M262 188C300 154 336 112 366 48C348 118 316 172 276 222Z"/><path d="M272 226C324 202 380 192 446 150C396 208 338 236 282 252Z"/><path d="M278 264C334 258 392 282 456 346C396 326 336 316 278 294Z"/><path d="M268 302C300 344 330 396 348 470C318 420 288 376 256 336Z"/></g>
+<linearGradient id="sp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c2030"/><stop offset="1" stop-color="#05060a"/></linearGradient>
+<g id="legs" fill="none" stroke-linecap="round" stroke-linejoin="round">
+ <path d="M272 198L340 124" stroke-width="15"/><path d="M340 124L368 50" stroke-width="10"/><circle cx="340" cy="124" r="7.500" stroke="none" fill="currentColor"/>
+ <path d="M278 216L376 168" stroke-width="15"/><path d="M376 168L444 214" stroke-width="10"/><circle cx="376" cy="168" r="7.500" stroke="none" fill="currentColor"/>
+ <path d="M278 240L392 246" stroke-width="15"/><path d="M392 246L448 322" stroke-width="10"/><circle cx="392" cy="246" r="7.500" stroke="none" fill="currentColor"/>
+ <path d="M270 264L354 328" stroke-width="15"/><path d="M354 328L378 436" stroke-width="10"/><circle cx="354" cy="328" r="7.500" stroke="none" fill="currentColor"/>
+</g>
+<g id="spider">
+ <use href="#legs" stroke="#05060a" color="#05060a"/>
+ <use href="#legs" stroke="#05060a" color="#05060a" transform="translate(512 0) scale(-1 1)"/>
+ <ellipse cx="256" cy="320" rx="52" ry="86" fill="url(#sp)"/>
+ <ellipse cx="256" cy="268" rx="22" ry="16" fill="#0a0c14"/>
+ <ellipse cx="256" cy="224" rx="36" ry="42" fill="url(#sp)"/>
+ </g>
 </defs>
 <clipPath id="rc"><rect width="512" height="512" rx="112"/></clipPath><g clip-path="url(#rc)"><rect width="512" height="512" fill="url(#bg)"/>
 <g stroke="#5a0710" stroke-opacity=".55" stroke-width="2.500" fill="none"><path d="M256 270L0 20M256 270L512 20M256 270L0 520M256 270L512 520M256 270V0M256 270V512M256 270H0M256 270H512"/><circle cx="256" cy="270" r="80"/><circle cx="256" cy="270" r="150"/><circle cx="256" cy="270" r="225"/></g>
-<g fill="#ffffff" fill-opacity=".14"><use href="#leg" transform="translate(-6 -6)"/><use href="#leg" transform="translate(518 -6) scale(-1 1)"/><path transform="translate(-4 -6)" d="M256 130L276 164L272 202L288 262L256 362L224 262L240 202L236 164Z"/></g>
-<g fill="url(#sp)"><use href="#leg"/><use href="#leg" transform="translate(512 0) scale(-1 1)"/><path d="M256 130L276 164L272 202L288 262L256 362L224 262L240 202L236 164Z"/></g>
-<path d="M256 142L268 166L256 180L244 166Z" fill="#fff" fill-opacity=".18"/>
-<path d="M240 212H272M246 250H266" stroke="#d11a2c" stroke-width="5" stroke-linecap="round"/>
+<g transform="translate(0 12)">
+ <g opacity=".35" transform="translate(7 9)" style="filter:blur(2px)"><use href="#spider" style="fill:#3a0208;stroke:#3a0208"/></g>
+ <use href="#spider"/>
+ <path d="M232 296H280L256 328Z M256 328L280 360H232Z" fill="#e8283c"/>
+ <path d="M236 206L254 214L246 232Z M276 206L258 214L266 232Z" fill="#fff"/>
+ <path d="M232 192Q256 178 280 192" stroke="#fff" stroke-opacity=".22" stroke-width="3" fill="none" stroke-linecap="round"/>
+ <path d="M214 304Q212 350 232 392" stroke="#fff" stroke-opacity=".16" stroke-width="5" fill="none" stroke-linecap="round"/>
+ <path d="M272 192L340 124M278 212L376 164M278 236L392 242" stroke="#fff" stroke-opacity=".18" stroke-width="3" fill="none" stroke-linecap="round"/>
+ <path transform="translate(512 0) scale(-1 1)" d="M272 192L340 124M278 212L376 164M278 236L392 242" stroke="#fff" stroke-opacity=".18" stroke-width="3" fill="none" stroke-linecap="round"/>
+</g>
 </g></svg>
