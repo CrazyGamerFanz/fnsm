@@ -103,3 +103,7 @@ textarea{width:100%;background:#0a0d15;border:1px solid var(--ln);color:var(--tx
 .hudL button,.hudR button,.hudB{border-radius:0}
 #mapwrap{border-color:#ff3fa4;box-shadow:0 0 0 1px #3a1050 inset}
 .seg.wrap .chip{flex:1 1 30%}
+
+.grp{font-size:11px;letter-spacing:.22em;text-transform:uppercase;font-weight:700;color:var(--c);margin:14px 2px 8px;display:flex;align-items:center;gap:10px}.grp:after{content:"";flex:1;height:1px;background:var(--c);opacity:.35}
+.hudR button#btk.on{color:#6fd3ff;border-color:#6fd3ff;background:#0a1830e6}
+.hudB{max-width:70%}

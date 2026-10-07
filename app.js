@@ -60,7 +60,7 @@ let S=load();
 let tab='feed',filter='all',sel=null,busy=false,hide=new Set(),showZones=true,showRadar=true,deferred=null;
 let map,mk,mapWrap,layers={},playerMk,routePts=null,routeLine=null;
 
-function fresh(){const s={v:2,handle:'',rep:0,helped:0,photos:0,byType:{rescue:0,crime:0,fire:0,assist:0},liked:[],haptics:true,pos:{...START},posts:[],reqs:[],id:100,preview:null};
+function fresh(){const s={v:2,handle:'',rep:0,helped:0,photos:0,byType:{rescue:0,crime:0,fire:0,assist:0},liked:[],haptics:true,pos:{...START},track:false,off:null,posts:[],reqs:[],id:100,preview:null};
  const n=Date.now();s.posts=SEED_POSTS.map((p,i)=>({id:i+1,h:p[0],loc:p[1],t:p[2],tag:p[3],ty:p[4],l:p[5],ts:n-p[6]*60000,sd:i*31+7,sub:p[7]}));
  for(let i=0;i<5;i++)spawn(s);return s}
 function load(){try{const s=JSON.parse(localStorage.getItem(KEY));if(s&&s.v===2){s.reqs.forEach(r=>{if(r.th==null){const q=POOL[r.k];r.th=q?q[7]:1;r.sub=r.sub||(q&&q[8])}});s.posts.forEach(p=>{if(p.ty==='crime'&&!p.sub)p.sub=CRIMES[p.sd%CRIMES.length][0]});return s}}catch(e){}return fresh()}
@@ -73,7 +73,7 @@ function spawn(s){
  const have=new Set(s.reqs.map(r=>r.k)),opts=POOL.map((_,i)=>i).filter(i=>!have.has(i));
  if(!opts.length)return false;
  const k=opts[Math.random()*opts.length|0],q=POOL[k];
- s.reqs.push({id:s.id++,k,ty:q[0],t:q[1],d:q[2],loc:q[3],rw:reward(q[4],q[7]),th:q[7],sub:q[8],lat:q[5],lng:q[6],by:HANDLES[Math.random()*HANDLES.length|0],ts:Date.now()-(Math.random()*18+1)*60000,sd:k*13+s.id});
+ s.reqs.push({id:s.id++,k,ty:q[0],t:q[1],d:q[2],loc:s.off?'Your area':q[3],rw:reward(q[4],q[7]),th:q[7],sub:q[8],lat:q[5]+(s.off?s.off.lat:0),lng:q[6]+(s.off?s.off.lng:0),by:HANDLES[Math.random()*HANDLES.length|0],ts:Date.now()-(Math.random()*18+1)*60000,sd:k*13+s.id});
  return true;
 }
 function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('on'),2000)}
@@ -106,9 +106,14 @@ function feedView(){
   <div class="shot">${scene(p.ty,p.sd,p.sub)}</div><div class="txt">${p.t}</div>
   <div class="row sp"><span class="tag ${T.tag}">${p.tag}</span><button class="like ${on?'on':''}" data-l="${p.id}"><svg><use href="#i-heart"/></svg>${p.l+(on?1:0)}</button></div></div>`}).join('')||'<div class="empty">No posts in this category yet.</div>');
 }
+function byPriority(){return S.reqs.slice().sort((a,b)=>(b.th==null?1:b.th)-(a.th==null?1:a.th)||miles(S.pos,a)-miles(S.pos,b))}
 function listHTML(){
- return `<h2>Nearby<span>${S.reqs.length} active</span></h2>`+(nearest().map(r=>{const T=TYPES[r.ty];
-  return `<div class="card item ${T.k}" data-r="${r.id}">${ico(r.ty)}<div style="flex:1;min-width:0"><div class="hn">${r.t}</div><div class="mu">${r.loc} · ${miles(S.pos,r).toFixed(1)} mi · ${ago(r.ts)}</div></div><span class="col">${thTag(r.th)}<span class="tag ${T.tag}">+${r.rw}</span></span></div>`}).join('')||'<div class="empty">All quiet in the city. New calls come in every few minutes.</div>');
+ const list=byPriority();let last=-1,out=`<h2>Priority<span>${list.length} active · by threat</span></h2>`;
+ if(!list.length)return out+'<div class="empty">All quiet in the city. New calls come in every few minutes.</div>';
+ list.forEach(r=>{const T=TYPES[r.ty],th=r.th==null?1:r.th;
+  if(th!==last){last=th;out+=`<div class="grp" style="--c:${THREAT[th].c}">${THREAT[th].n} threat · ${list.filter(x=>(x.th==null?1:x.th)===th).length}</div>`}
+  out+=`<div class="card item ${T.k}" data-r="${r.id}">${ico(r.ty)}<div style="flex:1;min-width:0"><div class="hn">${r.t}</div><div class="mu">${r.loc} · ${miles(S.pos,r).toFixed(1)} mi · ${ago(r.ts)}</div></div><span class="col">${thTag(r.th)}<span class="tag ${T.tag}">+${r.rw}</span></span></div>`});
+ return out;
 }
 function newPreview(){const ty=Object.keys(TYPES)[Math.random()*4|0];return {ty,sd:Math.random()*9999|0,sub:ty==='crime'?CRIMES[Math.random()*CRIMES.length|0][0]:undefined}}
 function camView(){
@@ -134,6 +139,7 @@ function meView(){
  <h2>Settings</h2>
  ${installBlock()}
  <div class="card"><div class="mu" style="margin-bottom:6px">Handle</div><div class="row"><input id="hin" maxlength="16" value="${S.handle}" autocomplete="off"><button class="chip on" id="hsave">Save</button></div><div class="err" id="herr"></div></div>
+ <div class="card"><div class="row sp"><div><div class="hn">Location tracking</div><div class="mu" style="margin-top:3px;line-height:1.4">Spider-Man follows your phone's GPS. It stays on your device.</div></div><button class="chip ${S.track?'on':''}" id="trk">${S.track?(gps.ok?'On':'Locating'):'Off'}</button></div></div>
  <div class="card"><div class="row sp"><span class="hn">Vibration</span><button class="chip ${S.haptics?'on':''}" id="hap">${S.haptics?'On':'Off'}</button></div></div>
  <button class="btn ghost" id="reset" style="margin-top:8px">Reset progress</button>`;
 }
@@ -150,13 +156,14 @@ function hexIcon(r,near){const T=THREAT[r.th==null?1:r.th],d=miles(S.pos,r);retu
 function playerIcon(){return L.divIcon({className:'mk',iconSize:[40,40],iconAnchor:[20,20],html:'<div class="me"><i></i><svg viewBox="0 0 40 40" width="40" height="40"><polygon points="20,3 34,33 20,26 6,33" fill="#fff" stroke="#6fd3ff" stroke-width="2.200" stroke-linejoin="round"/><polygon points="20,13 26,27 20,23 14,27" fill="#ff3fa4"/></svg></div>'})}
 function buildMapWrap(){
  mapWrap=document.createElement('div');mapWrap.id='mapwrap';
- mapWrap.innerHTML='<div id="map" style="position:absolute;inset:0"></div><div class="hudL" id="hudL"></div><div class="hudR"><button id="bz" title="Zones">ZONES</button><button id="br" title="Radar">RADAR</button><button id="bc" title="Recenter">CENTER</button><button id="brp" class="rp">+ REPORT</button></div><div class="hudB" id="hudB"></div>';
+ mapWrap.innerHTML='<div id="map" style="position:absolute;inset:0"></div><div class="hudL" id="hudL"></div><div class="hudR"><button id="bz" title="Zones">ZONES</button><button id="br" title="Radar">RADAR</button><button id="btk" title="Track my location">TRACK</button><button id="bc" title="Recenter">CENTER</button><button id="brp" class="rp">+ REPORT</button></div><div class="hudB" id="hudB"></div>';
  mapWrap.addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;
   if(b.dataset.h){hide.has(b.dataset.h)?hide.delete(b.dataset.h):hide.add(b.dataset.h);refreshMap()}
   else if(b.id==='bz'){showZones=!showZones;refreshMap()}
   else if(b.id==='br'){showRadar=!showRadar;refreshMap()}
   else if(b.id==='brp'){openReport()}
+  else if(b.id==='btk'){S.track?stopTrack():startTrack()}
   else if(b.id==='bc'){map.flyTo([S.pos.lat,S.pos.lng],13,{duration:.8})}
  });
  map=L.map(mapWrap.querySelector('#map'),{zoomControl:false,attributionControl:true,minZoom:10,maxZoom:18,zoomSnap:.5}).setView([S.pos.lat,S.pos.lng],12);
@@ -180,7 +187,7 @@ function refreshMap(){
   const m=L.marker([r.lat,r.lng],{icon:hexIcon(r,r.id===nid)}).addTo(layers.req);
   m.on('click',e=>{L.DomEvent.stopPropagation(e);if(!busy)openSheet(r.id)});
  });
- if(showZones)ZONES.forEach(z=>{
+ if(showZones)zs().forEach(z=>{
   const rs=S.reqs.filter(r=>Math.hypot(r.lat-z[1],r.lng-z[2])<.022),n=rs.length,mx=n?Math.max(...rs.map(r=>r.th==null?1:r.th)):-1,c=n?THREAT[mx].c:'#3dd68c';
   L.circle([z[1],z[2]],{radius:1100,color:'#ff3fa4',weight:1.6,opacity:.8,fillColor:n?c:'#8a5bff',fillOpacity:n?.10+mx*.03:.06,interactive:false}).addTo(layers.zones)
    .bindTooltip(z[0]+' · '+(n?THREAT[mx].n:'Calm'),{permanent:true,direction:'center',className:'zt',interactive:false});
@@ -194,7 +201,8 @@ function refreshMap(){
  }
  $('#hudL').innerHTML=Object.keys(TYPES).map(k=>`<button data-h="${k}" class="${hide.has(k)?'off':''}" style="--c:${TYPES[k].c}"><i></i>${S.reqs.filter(r=>r.ty===k).length}</button>`).join('');
  $('#bz').classList.toggle('on',showZones);$('#br').classList.toggle('on',showRadar);
- $('#hudB').textContent=S.reqs.length+' active · '+nearest().filter(r=>!hide.has(r.ty)).length+' shown';
+ $('#hudB').textContent=S.reqs.length+' active'+(S.track?(gps.ok?' · GPS ±'+Math.round(gps.acc)+' m':' · locating…'):'');
+ $('#btk').classList.toggle('on',!!S.track);$('#btk').textContent=S.track?'TRACKING':'TRACK';
 }
 function arc(a,b){
  const mx=(a.lat+b.lat)/2,my=(a.lng+b.lng)/2,dx=b.lat-a.lat,dy=b.lng-a.lng,cx=mx-dy*.28,cy=my+dx*.28,pts=[];
@@ -235,7 +243,7 @@ function swing(){
 }
 function finish(r){
  const before=lvl(S);
- S.rep+=r.rw;S.helped++;S.byType[r.ty]=(S.byType[r.ty]||0)+1;S.pos={lat:r.lat,lng:r.lng};
+ S.rep+=r.rw;S.helped++;S.byType[r.ty]=(S.byType[r.ty]||0)+1;if(!S.track)S.pos={lat:r.lat,lng:r.lng};
  S.reqs=S.reqs.filter(x=>x.id!==r.id);
  const quote=THANKS[Math.random()*THANKS.length|0];
  S.posts.unshift({id:Date.now(),h:r.by,loc:r.loc,t:'Spider-Man handled it: '+r.t+'. '+quote,tag:'Resolved',ty:r.ty,sub:r.sub,l:Math.random()*900+100|0,ts:Date.now(),sd:r.sd});
@@ -279,9 +287,55 @@ function startPatrol(){
  const el=$('#intro');el.classList.add('out');setTimeout(()=>el.remove(),500);render();
 }
 
+
+/* ---------- location tracking ---------- */
+let watchId=null,gps={ok:false,acc:null},gpsCircle=null,fixed=false;
+function relabel(){S.reqs.forEach(r=>{if(r.k>=0&&POOL[r.k])r.loc=S.off?'Your area':POOL[r.k][3]})}
+function shiftReqs(dl,dg){S.reqs.forEach(r=>{r.lat+=dl;r.lng+=dg})}
+function geoUI(){if(map)refreshMap();if(tab==='me')render()}
+function startTrack(){
+ if(!('geolocation' in navigator)){toast('Location isn\'t available on this device');return}
+ if(watchId!=null)return;
+ S.track=true;gps={ok:false,acc:null};fixed=false;save();geoUI();
+ watchId=navigator.geolocation.watchPosition(onFix,onGeoErr,{enableHighAccuracy:true,maximumAge:4000,timeout:25000});
+}
+function stopTrack(){
+ if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null}
+ S.track=false;gps={ok:false,acc:null};if(gpsCircle){gpsCircle.remove();gpsCircle=null}
+ save();geoUI();toast('Tracking off');
+}
+function onFix(p){
+ const c={lat:p.coords.latitude,lng:p.coords.longitude};
+ gps={ok:true,acc:p.coords.accuracy,hd:p.coords.heading};
+ const far=miles(c,START)>40;
+ if(far&&!S.off){S.off={lat:c.lat-START.lat,lng:c.lng-START.lng};shiftReqs(S.off.lat,S.off.lng);relabel();fixed=false;toast('Outside New York: requests placed around you')}
+ else if(!far&&S.off){shiftReqs(-S.off.lat,-S.off.lng);S.off=null;relabel();fixed=false}
+ if(busy)return;
+ S.pos=c;save();
+ if(map){
+  playerMk.setLatLng([c.lat,c.lng]);
+  if(!gpsCircle)gpsCircle=L.circle([c.lat,c.lng],{radius:p.coords.accuracy,color:'#6fd3ff',weight:1,opacity:.6,fillColor:'#6fd3ff',fillOpacity:.1,interactive:false}).addTo(map);
+  else{gpsCircle.setLatLng([c.lat,c.lng]);gpsCircle.setRadius(p.coords.accuracy)}
+  const el=playerMk.getElement(),sv=el&&el.querySelector('svg');if(sv)sv.style.transform=(p.coords.heading!=null&&!isNaN(p.coords.heading))?'rotate('+p.coords.heading+'deg)':'';
+  if(!fixed){fixed=true;if(tab==='map'){map.setView([c.lat,c.lng],14,{animate:true});toast('Location found')}}
+  const now=Date.now();if(now-(onFix.t||0)>2500||!fixed){onFix.t=now;refreshMap();const l=$('#maplist');if(l&&tab==='map')l.innerHTML=listHTML()}
+ }
+}
+function onGeoErr(e){
+ if(e.code===1){if(watchId!=null){navigator.geolocation.clearWatch(watchId);watchId=null}S.track=false;toast('Location is blocked. Allow it in your browser settings.')}
+ else toast('Can\'t get a GPS fix yet');
+ save();geoUI();
+}
+function resumeTrack(){
+ if(!S.track)return;
+ const ask=navigator.permissions&&navigator.permissions.query?navigator.permissions.query({name:'geolocation'}):null;
+ if(ask)ask.then(r=>{if(r.state==='granted')startTrack();else{S.track=false;save()}}).catch(()=>{S.track=false});else S.track=false;
+}
+
 /* ---------- report an incident ---------- */
 let F=null;
-function nearestZone(lat,lng){let b=null,d=1e9;ZONES.forEach(z=>{const k=Math.hypot(z[1]-lat,z[2]-lng);if(k<d){d=k;b=z[0]}});return d<.06?b:'Manhattan'}
+function zs(){return ZONES.map((z,i)=>[S.off?'Sector '+(i+1):z[0],z[1]+(S.off?S.off.lat:0),z[2]+(S.off?S.off.lng:0)])}
+function nearestZone(lat,lng){if(S.off)return 'Your area';let b=null,d=1e9;ZONES.forEach(z=>{const k=Math.hypot(z[1]-lat,z[2]-lng);if(k<d){d=k;b=z[0]}});return d<.06?b:'Manhattan'}
 function openReport(){
  let c=S.pos;if(tab==='map'&&map){const m=map.getCenter();c={lat:m.lat,lng:m.lng}}
  F={ty:'crime',sub:'mugging',title:'',desc:'',th:null,lat:c.lat,lng:c.lng,loc:nearestZone(c.lat,c.lng),err:''};
@@ -341,6 +395,7 @@ document.addEventListener('click',e=>{
   case'shut':return shoot();
   case'newscene':S.preview=null;return render();
   case'start':return startPatrol();
+  case'trk':S.track?stopTrack():startTrack();return;
   case'hap':S.haptics=!S.haptics;buzz(20);return render();
   case'install':if(deferred){deferred.prompt();deferred=null;render()}return;
   case'hsave':{const v=$('#hin').value.trim().replace(/[^a-zA-Z0-9_.]/g,''),er=$('#herr');if(!v){er.textContent='Handle can\'t be empty.';return}S.handle=v;toast('Handle saved');return render()}
@@ -355,5 +410,5 @@ setInterval(()=>{
  if(spawn(S)){save();header();toast('New request nearby');if(tab==='map'){refreshMap();const l=$('#maplist');if(l)l.innerHTML=listHTML()}}
 },40000);
 if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
-intro();render();
+intro();render();resumeTrack();
 })();
