@@ -133,12 +133,13 @@ function installBlock(){
  if(deferred)return '<button class="btn" id="install" style="margin-bottom:10px">Install app</button>';
  return `<div class="card"><div class="hn">Install on your phone</div><div class="mu" style="margin-top:4px;line-height:1.5">${ios?'Tap the Share button in Safari, then Add to Home Screen.':'Open the browser menu, then choose Install app or Add to Home screen.'}</div></div>`;
 }
-function audioCard(){const a=Aud.get();return `<div class="card" id="aucard"><div class="hn" style="margin-bottom:12px">Audio</div><div class="row sp"><span>Background music</span><button class="sw${a.music?' on':''}" id="aumus" role="switch" aria-checked="${a.music}" aria-label="Background music"><i></i></button></div><div class="row sp" style="margin-top:14px"><span>Sound effects</span><button class="sw${a.sfx?' on':''}" id="ausfx" role="switch" aria-checked="${a.sfx}" aria-label="Sound effects"><i></i></button></div><div class="row" style="margin-top:16px;gap:14px"><span class="mu">Volume</span><input type="range" id="auvol" min="0" max="100" value="${Math.round(a.vol*100)}" aria-label="Volume"></div></div>`}
+function audioCard(){const a=Aud.get();return `<div class="card" id="aucard"><div class="hn" style="margin-bottom:12px">Audio</div><div class="row sp"><span>Background music</span><button class="sw${a.music?' on':''}" id="aumus" role="switch" aria-checked="${a.music}" aria-label="Background music"><i></i></button></div><div class="row sp" style="margin-top:14px"><span>Sound effects</span><button class="sw${a.sfx?' on':''}" id="ausfx" role="switch" aria-checked="${a.sfx}" aria-label="Sound effects"><i></i></button></div><div class="mu" id="autrack" style="margin-top:12px;line-height:1.4">Track: ${Aud.trackName()}</div><div class="row" style="gap:8px;margin-top:8px"><button class="chip" id="aupick">Choose music file</button>${Aud.hasCustom()?'<button class="chip" id="aureset">Use default</button>':''}</div><input type="file" id="aufile" accept="audio/*" hidden>
+<div class="row" style="margin-top:16px;gap:14px"><span class="mu">Volume</span><input type="range" id="auvol" min="0" max="100" value="${Math.round(a.vol*100)}" aria-label="Volume"></div></div>`}
 function updateAudioUI(){
  const a=Aud.get(),m=$('#aumus'),f=$('#ausfx');
  if(m){m.classList.toggle('on',a.music);m.setAttribute('aria-checked',a.music)}
  if(f){f.classList.toggle('on',a.sfx);f.setAttribute('aria-checked',a.sfx)}
- const u=document.querySelector('#snd use');if(u)u.setAttribute('href',(a.music||a.sfx)?'#i-snd':'#i-mute');
+ const tr=$('#autrack');if(tr)tr.textContent='Track: '+Aud.trackName();const u=document.querySelector('#snd use');if(u)u.setAttribute('href',(a.music||a.sfx)?'#i-snd':'#i-mute');
 }
 function accountCard(){const u=getUsers()[acct]||{};return `<div class="card"><div class="mu" style="margin-bottom:6px">Account</div><div class="hn">@${S.handle}</div><div class="mu">${u.email||''}</div><div class="row" style="gap:8px;margin-top:12px"><button class="chip" id="logout">Log out</button><button class="chip" id="delacct" style="color:#ff8a96;border-color:#5a1a24">Delete account</button></div></div>`}
 function meView(){
@@ -583,6 +584,8 @@ document.addEventListener('click',e=>{
   case'obs':return obGo(3);
   case'trk':Aud.toggle(!tOn());return toggleTrack();
   case'alsw':Aud.toggle(S.alerts===false);return toggleAlerts();
+  case'aupick':{const f=$('#aufile');if(f)f.click();return}
+  case'aureset':Aud.clearCustom().then(()=>{if(tab==='me')render()});return;
   case'snd':Aud.toggleAll();Aud.unlock();return updateAudioUI();
   case'aumus':Aud.setMusic(!Aud.get().music);Aud.toggle(Aud.get().music);return updateAudioUI();
   case'ausfx':Aud.setSfx(!Aud.get().sfx);Aud.toggle(Aud.get().sfx);return updateAudioUI();
@@ -600,6 +603,7 @@ document.addEventListener('click',e=>{
   case'reset':if(confirm('Reset all progress? Your handle stays.')){const h=S.handle;S=fresh();S.handle=h;hide.clear();filter='all';if(map){playerMk.setLatLng([S.pos.lat,S.pos.lng]);map.setView([S.pos.lat,S.pos.lng],13)}render();toast('Progress reset')}return;
  }
 });
+document.addEventListener('change',e=>{if(e.target.id==='aufile'&&e.target.files[0]){const f=e.target.files[0];Aud.setCustom(f).then(()=>{toast('Music updated');if(tab==='me')render()}).catch(()=>toast('Could not load that file'))}});
 document.addEventListener('input',e=>{if(e.target.id==='auvol')Aud.setVol(e.target.value/100)});
 document.addEventListener('submit',e=>{if(e.target.id==='af'){e.preventDefault();authSubmit()}});
 document.addEventListener('click',e=>{if(e.target.id==='scrim')closeSheet()});

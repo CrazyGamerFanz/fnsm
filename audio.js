@@ -2,7 +2,8 @@ const Aud=(()=>{
  const K='fnsm-audio';
  let st={music:true,sfx:true,vol:.7};
  try{Object.assign(st,JSON.parse(localStorage.getItem(K)||'{}'))}catch(e){}
- let ctx=null,master,musicG,sfxG,nbuf,timer=null,nextT=0,stepI=0,keep=null,lastBlip=0;
+ let ctx=null,master,musicG,sfxG,nbuf,timer=null,nextT=0,stepI=0,keep=null,lastBlip=0,playing=false,track=null,kind='bundled';
+ const BUNDLED='Greater Together (feat. Ben Billions)';
  const api={onchange:null};
  const saveSt=()=>{try{localStorage.setItem(K,JSON.stringify(st))}catch(e){}};
  const mtof=m=>440*Math.pow(2,(m-69)/12);
@@ -70,15 +71,39 @@ const Aud=(()=>{
   while(nextT<ctx.currentTime+.18){schedStep(stepI,nextT);nextT+=STEP;stepI++}
   timer=setTimeout(pump,45);
  }
+ function startSynth(){if(!ensure()||timer)return;nextT=ctx.currentTime+.1;stepI=0;pump()}
+ function stopSynth(){if(timer){clearTimeout(timer);timer=null}}
+ function idb(){return new Promise((res,rej)=>{const r=indexedDB.open('fnsm-audio',1);r.onupgradeneeded=()=>r.result.createObjectStore('f');r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+ async function idbGet(){try{const db=await idb();return await new Promise(res=>{const q=db.transaction('f').objectStore('f').get('custom');q.onsuccess=()=>res(q.result||null);q.onerror=()=>res(null)})}catch(e){return null}}
+ async function idbPut(v){const db=await idb();return new Promise((res,rej)=>{const t=db.transaction('f','readwrite');t.objectStore('f').put(v,'custom');t.oncomplete=res;t.onerror=()=>rej(t.error)})}
+ async function idbDel(){try{const db=await idb();return await new Promise(res=>{const t=db.transaction('f','readwrite');t.objectStore('f').delete('custom');t.oncomplete=res;t.onerror=res})}catch(e){}}
+ async function useTrack(){
+  if(!ensure())return;
+  let url='music/bg.mp3',k='bundled';
+  const c=await idbGet();if(c&&c.blob){url=URL.createObjectURL(c.blob);k='custom'}
+  if(!playing)return;
+  if(!track){
+   track=new Audio();track.loop=true;track.preload='auto';
+   try{ctx.createMediaElementSource(track).connect(musicG)}catch(e){}
+   track.addEventListener('error',()=>{if(!playing)return;if(k==='custom'||kind==='custom'){kind='bundled'}else{kind='synth';stopTrack();startSynth()}api.onchange&&api.onchange()});
+  }
+  if(track.dataset.u!==url){track.dataset.u=url;track.src=url}
+  kind=k;
+  try{await track.play()}catch(e){if(track.error){kind='synth';startSynth()}}
+  api.onchange&&api.onchange();
+ }
+ function stopTrack(){if(track){try{track.pause()}catch(e){}}}
  function startMusic(){
-  if(!ensure()||timer)return;
+  if(!ensure()||playing)return;
+  playing=true;
   if(ctx.state==='suspended')ctx.resume();
   musicG.gain.cancelScheduledValues(ctx.currentTime);musicG.gain.setValueAtTime(.0001,ctx.currentTime);musicG.gain.linearRampToValueAtTime(.55,ctx.currentTime+2.5);
-  nextT=ctx.currentTime+.1;stepI=0;pump();
+  useTrack();
  }
  function stopMusic(){
-  if(timer){clearTimeout(timer);timer=null}
-  if(ctx){const t=ctx.currentTime;musicG.gain.cancelScheduledValues(t);musicG.gain.setTargetAtTime(.0001,t,.15)}
+  playing=false;stopSynth();
+  if(ctx){const t=ctx.currentTime;musicG.gain.cancelScheduledValues(t);musicG.gain.setTargetAtTime(.0001,t,.15);setTimeout(()=>{if(!playing)stopTrack()},500)}
+  else stopTrack();
  }
 
  /* ---------- sound effects ---------- */
@@ -144,16 +169,20 @@ const Aud=(()=>{
   if(!ensure())return;
   if(ctx.state==='suspended')ctx.resume();
   keepAlive();
-  if(st.music&&!timer&&(st.music))startMusic();
+  if(st.music&&!playing)startMusic();
  };
  api.setMusic=on=>{st.music=!!on;saveSt();if(on){api.unlock();if(ctx&&musicG)startMusic()}else stopMusic();api.onchange&&api.onchange()};
+ api.trackName=()=>st.customName||(kind==='synth'?'Built-in score':BUNDLED);
+ api.hasCustom=()=>!!st.customName;
+ api.setCustom=async f=>{await idbPut({blob:f,name:f.name});st.customName=f.name.replace(/\.[^.]+$/,'');saveSt();if(playing){stopTrack();if(track)track.dataset.u='';stopSynth();await useTrack()}api.onchange&&api.onchange()};
+ api.clearCustom=async()=>{await idbDel();delete st.customName;saveSt();if(playing){stopTrack();if(track)track.dataset.u='';stopSynth();await useTrack()}api.onchange&&api.onchange()};
  api.setSfx=on=>{st.sfx=!!on;saveSt();if(ctx)sfxG.gain.value=on?1:0;api.onchange&&api.onchange()};
  api.setVol=v=>{st.vol=Math.max(0,Math.min(1,v));saveSt();if(ctx)master.gain.setTargetAtTime(st.vol,ctx.currentTime,.05)};
  api.toggleAll=()=>{const anyOn=st.music||st.sfx;if(anyOn){api.setSfx(false);api.setMusic(false)}else{api.setSfx(true);api.setMusic(true)}};
  api.anyOn=()=>st.music||st.sfx;
  document.addEventListener('visibilitychange',()=>{
   if(!ctx)return;
-  if(document.hidden){ctx.suspend&&ctx.suspend()}else if(st.music||st.sfx){ctx.resume&&ctx.resume()}
+  if(document.hidden){ctx.suspend&&ctx.suspend();if(track)try{track.pause()}catch(e){}}else if(st.music||st.sfx){ctx.resume&&ctx.resume();if(playing&&track&&kind!=='synth')track.play().catch(()=>{})}
  });
  ['pointerdown','touchend','keydown'].forEach(ev=>document.addEventListener(ev,()=>api.unlock(),{passive:true}));
  return api;
