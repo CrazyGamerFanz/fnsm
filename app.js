@@ -133,6 +133,13 @@ function installBlock(){
  if(deferred)return '<button class="btn" id="install" style="margin-bottom:10px">Install app</button>';
  return `<div class="card"><div class="hn">Install on your phone</div><div class="mu" style="margin-top:4px;line-height:1.5">${ios?'Tap the Share button in Safari, then Add to Home Screen.':'Open the browser menu, then choose Install app or Add to Home screen.'}</div></div>`;
 }
+function audioCard(){const a=Aud.get();return `<div class="card" id="aucard"><div class="hn" style="margin-bottom:12px">Audio</div><div class="row sp"><span>Background music</span><button class="sw${a.music?' on':''}" id="aumus" role="switch" aria-checked="${a.music}" aria-label="Background music"><i></i></button></div><div class="row sp" style="margin-top:14px"><span>Sound effects</span><button class="sw${a.sfx?' on':''}" id="ausfx" role="switch" aria-checked="${a.sfx}" aria-label="Sound effects"><i></i></button></div><div class="row" style="margin-top:16px;gap:14px"><span class="mu">Volume</span><input type="range" id="auvol" min="0" max="100" value="${Math.round(a.vol*100)}" aria-label="Volume"></div></div>`}
+function updateAudioUI(){
+ const a=Aud.get(),m=$('#aumus'),f=$('#ausfx');
+ if(m){m.classList.toggle('on',a.music);m.setAttribute('aria-checked',a.music)}
+ if(f){f.classList.toggle('on',a.sfx);f.setAttribute('aria-checked',a.sfx)}
+ const u=document.querySelector('#snd use');if(u)u.setAttribute('href',(a.music||a.sfx)?'#i-snd':'#i-mute');
+}
 function accountCard(){const u=getUsers()[acct]||{};return `<div class="card"><div class="mu" style="margin-bottom:6px">Account</div><div class="hn">@${S.handle}</div><div class="mu">${u.email||''}</div><div class="row" style="gap:8px;margin-top:12px"><button class="chip" id="logout">Log out</button><button class="chip" id="delacct" style="color:#ff8a96;border-color:#5a1a24">Delete account</button></div></div>`}
 function meView(){
  const l=lvl(S);
@@ -145,6 +152,7 @@ function meView(){
  ${accountCard()}
  ${trackCard()}
  ${alertCard()}
+ ${audioCard()}
  <div class="card"><div class="row sp"><span class="hn">Vibration</span><button class="chip ${S.haptics?'on':''}" id="hap">${S.haptics?'On':'Off'}</button></div></div>
  <button class="btn ghost" id="reset" style="margin-top:8px">Reset progress</button>`;
 }
@@ -166,6 +174,7 @@ function buildMapWrap(){
  mapWrap.innerHTML='<div id="map" style="position:absolute;inset:0"></div><div class="hudL" id="hudL"></div><div class="hudR"><button id="bz" title="Zones">ZONES</button><button id="br" title="Radar">RADAR</button><button id="btk" title="Track my location">TRACK</button><button id="bc" title="Recenter">CENTER</button><button id="brp" class="rp">+ REPORT</button></div><div class="hudB" id="hudB"></div>';
  mapWrap.addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;
+  if(b.id==='btk')Aud.toggle(!tOn());else Aud.play('tap');
   if(b.dataset.h){hide.has(b.dataset.h)?hide.delete(b.dataset.h):hide.add(b.dataset.h);refreshMap()}
   else if(b.id==='bz'){showZones=!showZones;refreshMap()}
   else if(b.id==='br'){showRadar=!showRadar;refreshMap()}
@@ -228,7 +237,7 @@ function clearRoute(){if(layers.route)layers.route.clearLayers();routePts=null}
 function openSheet(id){
  const r=S.reqs.find(x=>x.id==id);if(!r)return;sel=r;const T=TYPES[r.ty],d=miles(S.pos,r);
  if(tab==='map'&&map){$('#view').scrollTop=0;drawRoute(r)}
- const sh=$('#sheet');sh.classList.remove('hide');$('#scrim').classList.add('on');sh.classList.remove('swap');void sh.offsetWidth;sh.classList.add('swap');
+ Aud.play('sheet');const sh=$('#sheet');sh.classList.remove('hide');$('#scrim').classList.add('on');sh.classList.remove('swap');void sh.offsetWidth;sh.classList.add('swap');
  sh.innerHTML=`<div class="row sp"><span class="row" style="gap:8px"><span class="tag ${T.tag}">${T.n}${r.sub?' · '+(CRIMES.find(x=>x[0]===r.sub)||[0,''])[1]:''}</span>${thTag(r.th)}</span><button class="like" id="cls">Close</button></div>
  <div class="shot" style="height:120px">${scene(r.ty,r.sd,r.sub)}</div><div class="hn" style="font-size:18px">${r.t}</div><div class="mu">${r.mine?'Reported by you':'@'+r.by} · ${r.loc} · ${ago(r.ts)}</div>
  <div class="txt" style="margin:6px 0">${r.d}</div><div class="row sp mu" style="margin-bottom:10px"><span>${d.toFixed(1)} mi · about ${Math.max(6,Math.round(d*14))} sec swing</span><span style="color:#fff">+${r.rw} rep</span></div>
@@ -237,7 +246,7 @@ function openSheet(id){
 function shut(){$('#sheet').classList.add('hide');$('#scrim').classList.remove('on')}
 function closeSheet(){if(busy)return;shut();sel=null;clearRoute()}
 function swing(){
- const r=sel;if(!r||busy)return;busy=true;buzz(30);if(mapWrap)mapWrap.classList.add('swinging');
+ const r=sel;if(!r||busy)return;busy=true;buzz(30);Aud.swing(2600);if(mapWrap)mapWrap.classList.add('swinging');
  if(!tab||tab!=='map')setTab('map');
  if(!routePts)drawRoute(r);
  $('#act').innerHTML='<div class="mu" style="letter-spacing:.2em;text-transform:uppercase">Swinging…</div><div class="pb"><i id="pg"></i></div>';
@@ -258,6 +267,7 @@ function finish(r){
  if(S.reqs.length<4)spawn(S);
  busy=false;if(mapWrap)mapWrap.classList.remove('swinging');shut();sel=null;clearRoute();save();buzz([60,40,60]);
  const up=lvl(S)>before;
+ Aud.play('land');setTimeout(()=>Aud.win(up),260);
  const m=$('#modal');m.classList.remove('hide');
  m.innerHTML=`<div class="mc"><img src="logo.svg" alt="" width="84" height="84"><div class="kick">${up?'Level up':'Mission complete'}</div><div class="big" id="bigc">${up?'LV '+lvl(S):'+0 rep'}</div>
  <div class="hn" style="font-size:16px">${r.t}</div><div style="margin:6px 0">${thTag(r.th)}</div><div class="mu" style="margin:4px 0 12px">${r.mine?'You':'@'+r.by}: "${quote}"</div>
@@ -265,12 +275,12 @@ function finish(r){
  header();if(map)refreshMap();
  requestAnimationFrame(()=>requestAnimationFrame(()=>{const b=$('#mbar');if(b)b.style.width=((S.rep%500)/5)+'%';if(!up)countUp($('#bigc'),r.rw)}));
 }
-function countUp(el,to){if(!el)return;const t0=performance.now(),d=800;(function f(n){const p=Math.min(1,(n-t0)/d),e=1-Math.pow(1-p,3);el.textContent='+'+Math.round(to*e)+' rep';if(p<1)requestAnimationFrame(f)})(t0)}
+function countUp(el,to){if(!el)return;const t0=performance.now(),d=800;(function f(n){const p=Math.min(1,(n-t0)/d),e=1-Math.pow(1-p,3),v=Math.round(to*e);if(Math.floor(v/30)!==Math.floor((countUp.l||0)/30))Aud.play('tick');countUp.l=v;el.textContent='+'+v+' rep';if(p<1)requestAnimationFrame(f)})(t0)}
 function closeModal(){$('#modal').classList.add('hide');render()}
 
 /* ---------- photo ---------- */
 function shoot(){
- const f=$('#flash');f.classList.add('go');setTimeout(()=>f.classList.remove('go'),70);buzz(25);
+ Aud.play('shutter');const f=$('#flash');f.classList.add('go');setTimeout(()=>f.classList.remove('go'),70);buzz(25);
  const caps=['Caught him mid-swing over Midtown.','Golden hour web-slinging.','Night patrol, no filter.','Right over the rooftops.','Best shot of the week.','Neighborhood watch, live.'];
  const p=S.preview;
  S.photos++;S.rep+=10;
@@ -309,6 +319,7 @@ function intro(){
  </div><div class="dots" id="dots"><i class="on"></i><i></i><i></i><i></i><i></i></div></div>`;
 }
 function obGo(n){
+ if(n!==ob.step)Aud.play('swipe');
  ob.step=n;$('#obt').style.transform='translateX('+(-n*100)+'%)';
  document.querySelectorAll('#intro .obp').forEach((p,i)=>p.classList.toggle('on',i===n));
  document.querySelectorAll('#dots i').forEach((d,i)=>d.classList.toggle('on',i<=n));
@@ -327,7 +338,7 @@ function nextAlert(){
  alertBusy=true;const T=THREAT[r.th],el=$('#alert');
  el.style.setProperty('--c',T.c);el.className='on'+(r.th===3?' crit':'');el.dataset.id=r.id;
  el.innerHTML=`<div class="aic">${ico(r.ty,36)}</div><div class="atx"><div class="ak">${T.n} threat · ${TYPES[r.ty].n}</div><div class="at">${r.t}</div><div class="am">${r.loc} · ${distLabel(r)} · +${r.rw} rep</div></div><div class="abt"><button id="aview">View</button><button id="aclose" aria-label="Dismiss">×</button></div>`;
- buzz(r.th===3?[120,60,120,60,240]:[100,50,100]);
+ buzz(r.th===3?[120,60,120,60,240]:[100,50,100]);Aud.alert(r.th);
  clearTimeout(ahide);ahide=setTimeout(hideAlert,7000);
 }
 function hideAlert(){clearTimeout(ahide);const el=$('#alert');el.classList.remove('on');setTimeout(()=>{alertBusy=false;nextAlert()},450)}
@@ -406,7 +417,7 @@ function setAuthMode(m){
 async function authSubmit(){
  if(busyAuth)return;
  const err=$('#a-err'),go=$('#a-go'),id=$('#a-id').value.trim(),pw=$('#a-pw').value;
- const fail=m=>{err.textContent=m;const f=$('#af');f.classList.remove('shake');void f.offsetWidth;f.classList.add('shake');buzz(40)};
+ const fail=m=>{Aud.play('error');err.textContent=m;const f=$('#af');f.classList.remove('shake');void f.offsetWidth;f.classList.add('shake');buzz(40)};
  if(Date.now()<lockUntil)return fail('Too many attempts. Try again in '+Math.ceil((lockUntil-Date.now())/1000)+' s.');
  err.textContent='';busyAuth=true;go.disabled=true;go.textContent='One moment…';
  try{
@@ -422,7 +433,7 @@ async function authSubmit(){
    const first=!Object.keys(users).length,salt=b64e(crypto.getRandomValues(new Uint8Array(16)));
    users[k]={name:id,email,salt,hash:await hashPw(pw,salt),created:Date.now()};putUsers(users);
    let st=null;if(first){try{const raw=localStorage.getItem(LEGACY);if(raw){st=parseState(raw);localStorage.removeItem(LEGACY)}}catch(e){}}
-   S=st||fresh();S.handle=id;acct=k;localStorage.setItem(SKEY,k);save();render();buzz(30);obGo(2);
+   S=st||fresh();S.handle=id;acct=k;localStorage.setItem(SKEY,k);save();render();buzz(30);Aud.play('chime');obGo(2);
   }else{
    if(!id||!pw)return fail('Enter your username and password.');
    const low=id.toLowerCase(),u=users[low]||Object.values(users).find(x=>x.email===low);
@@ -430,7 +441,7 @@ async function authSubmit(){
    if(!u){await hashPw(pw,b64e(new Uint8Array(16)));return bad()}
    if(await hashPw(pw,u.salt)!==u.hash)return bad();
    fails=0;acct=u.name.toLowerCase();localStorage.setItem(SKEY,acct);
-   S=load();S.handle=u.name;save();render();buzz(30);leaveIntro();resumeTrack();
+   S=load();S.handle=u.name;save();render();buzz(30);Aud.play('chime');leaveIntro();resumeTrack();
   }
  }catch(e){fail(e&&e.message==='secure'?'Accounts need a secure (https) connection.':'Something went wrong. Try again.')}
  finally{busyAuth=false;go.disabled=false;go.textContent=authMode==='signup'?'Create account':'Log in'}
@@ -540,13 +551,14 @@ function submitReport(){
  const r={id:S.id++,k:-1,ty:F.ty,t:title,d:desc,loc:F.loc,rw:reward(BASE[F.ty],F.th),th:F.th,sub:F.ty==='crime'?F.sub:undefined,lat:F.lat,lng:F.lng,by:S.handle,mine:1,ts:Date.now(),sd:Math.random()*9999|0};
  S.reqs.push(r);S.rep+=15;
  S.posts.unshift({id:Date.now(),h:S.handle,loc:F.loc,t:title+'. '+desc,tag:'Threat: '+THREAT[F.th].n,ty:F.ty,sub:r.sub,l:0,ts:Date.now(),sd:r.sd});
- $('#report').classList.add('hide');F=null;buzz([40,30,40]);toast('Report posted +15 rep');
+ Aud.play('post');$('#report').classList.add('hide');F=null;buzz([40,30,40]);toast('Report posted +15 rep');
  render();if(tab==='map'&&map)refreshMap();
 }
 
 /* ---------- events ---------- */
 document.addEventListener('click',e=>{
  const t=e.target.closest('button,[data-r]');if(!t)return;
+ Aud.ui(t);
  if(t.closest('#mapwrap'))return;
  if(t.closest('#nav')){if(!busy){closeSheet();setTab(t.dataset.t)}return}
  if(t.dataset.ob!=null&&t.dataset.ob!==''){return obGo(+t.dataset.ob)}
@@ -569,8 +581,11 @@ document.addEventListener('click',e=>{
   case'start':return finishSetup();
   case'obl':startTrack();return obGo(3);
   case'obs':return obGo(3);
-  case'trk':return toggleTrack();
-  case'alsw':return toggleAlerts();
+  case'trk':Aud.toggle(!tOn());return toggleTrack();
+  case'alsw':Aud.toggle(S.alerts===false);return toggleAlerts();
+  case'snd':Aud.toggleAll();Aud.unlock();return updateAudioUI();
+  case'aumus':Aud.setMusic(!Aud.get().music);Aud.toggle(Aud.get().music);return updateAudioUI();
+  case'ausfx':Aud.setSfx(!Aud.get().sfx);Aud.toggle(Aud.get().sfx);return updateAudioUI();
   case'alallow':return askNotif();
   case'altest':return testAlert();
   case'aview':{const id=$('#alert').dataset.id;hideAlert();return openFromAlert(id)}
@@ -580,11 +595,12 @@ document.addEventListener('click',e=>{
   case'a-eye':{const h=$('#a-pw').type==='password';$('#a-pw').type=h?'text':'password';$('#a-pw2').type=h?'text':'password';t.textContent=h?'Hide':'Show';return}
   case'logout':return logout();
   case'delacct':return deleteAccount();
-  case'hap':S.haptics=!S.haptics;buzz(20);return render();
+  case'hap':Aud.toggle(!S.haptics);S.haptics=!S.haptics;buzz(20);return render();
   case'install':if(deferred){deferred.prompt();deferred=null;render()}return;
   case'reset':if(confirm('Reset all progress? Your handle stays.')){const h=S.handle;S=fresh();S.handle=h;hide.clear();filter='all';if(map){playerMk.setLatLng([S.pos.lat,S.pos.lng]);map.setView([S.pos.lat,S.pos.lng],13)}render();toast('Progress reset')}return;
  }
 });
+document.addEventListener('input',e=>{if(e.target.id==='auvol')Aud.setVol(e.target.value/100)});
 document.addEventListener('submit',e=>{if(e.target.id==='af'){e.preventDefault();authSubmit()}});
 document.addEventListener('click',e=>{if(e.target.id==='scrim')closeSheet()});
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();deferred=e;if(tab==='me')render()});
@@ -592,12 +608,13 @@ window.addEventListener('appinstalled',()=>{deferred=null;toast('FNSM installed'
 setInterval(()=>{
  if(busy||!S.handle)return;
  const r=spawn(S);
- if(r){S.lastSeen=Date.now();save();header();if(!alertNew(r)&&!document.hidden)toast('New request nearby');if(tab==='map'){refreshMap();const l=$('#maplist');if(l)l.innerHTML=listHTML()}}
+ if(r){S.lastSeen=Date.now();save();header();if(!alertNew(r)&&!document.hidden){toast('New request nearby');Aud.play('blip')}if(tab==='map'){refreshMap();const l=$('#maplist');if(l)l.innerHTML=listHTML()}}
  else S.lastSeen=Date.now();
 },40000);
 document.addEventListener('visibilitychange',()=>{if(document.hidden){S.lastSeen=Date.now();save()}else catchUp()});
 if('serviceWorker'in navigator)navigator.serviceWorker.addEventListener('message',e=>{if(e.data&&e.data.type==='open')openFromAlert(e.data.id)});
 if('serviceWorker'in navigator&&location.protocol.startsWith('http'))navigator.serviceWorker.register('sw.js').catch(()=>{});
+Aud.onchange=updateAudioUI;updateAudioUI();
 intro();render();resumeTrack();catchUp();
 try{const q=new URLSearchParams(location.search).get('open');if(q)setTimeout(()=>openFromAlert(q),1800)}catch(e){}
 })();

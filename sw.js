@@ -1,4 +1,4 @@
-const C='fnsm-v13',T='fnsm-tiles',A=['./','index.html','style.css?v=13','app.js?v=13','scenes.js?v=13','manifest.json','icon.svg','logo.svg','icon-180.png','icon-192.png','icon-512.png','lib/leaflet.js','lib/leaflet.css'];
+const C='fnsm-v14',T='fnsm-tiles',A=['./','index.html','style.css?v=14','app.js?v=14','audio.js?v=14','scenes.js?v=14','manifest.json','icon.svg','logo.svg','icon-180.png','icon-192.png','icon-512.png','lib/leaflet.js','lib/leaflet.css'];
 self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(A)).catch(()=>{}));self.skipWaiting()});
 self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==C&&x!==T).map(x=>caches.delete(x)))));self.clients.claim()});
 self.addEventListener('fetch',e=>{

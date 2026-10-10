@@ -12,12 +12,12 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="icon-180.png">
 <link rel="stylesheet" href="lib/leaflet.css">
-<link rel="stylesheet" href="style.css?v=13">
+<link rel="stylesheet" href="style.css?v=14">
 </head><body>
 <div id="app">
   <header id="top">
     <div class="brand"><img class="logo" src="logo.svg" alt=""><div><div class="wm">FN<b>SM</b></div><div class="sub">Friendly Neighborhood Spider-Man</div></div></div>
-    <div class="lvl"><span id="lvl">LV 1</span><div class="bar"><i id="xp"></i></div></div>
+    <div class="hr"><button id="snd" aria-label="Sound on or off"><svg><use href="#i-snd"/></svg></button><div class="lvl"><span id="lvl">LV 1</span><div class="bar"><i id="xp"></i></div></div></div>
   </header>
   <main id="view"></main>
   <nav id="nav">
@@ -36,6 +36,8 @@
 </div>
 <svg width="0" height="0" style="position:absolute"><defs>
 <symbol id="spider" viewBox="0 0 40 40"><g fill="currentColor"><ellipse cx="20" cy="26" rx="5.500" ry="8.500"/><ellipse cx="20" cy="15" rx="3.600" ry="4"/><ellipse cx="20" cy="20.500" rx="2.200" ry="2"/></g><g stroke="currentColor" stroke-width="1.900" stroke-linecap="round" stroke-linejoin="round" fill="none"><path d="M23 13L29 7L31 2M23 15.500L33 12L38 16M23 19L34 19.500L38 26.500M22.500 23L30 28.500L32 37M17 13L11 7L9 2M17 15.500L7 12L2 16M17 19L6 19.500L2 26.500M17.500 23L10 28.500L8 37"/></g></symbol>
+<symbol id="i-snd" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9zM16 8.500a5 5 0 010 7M18.500 6a8.500 8.500 0 010 12" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+<symbol id="i-mute" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9zM17 9l5 6M22 9l-5 6" fill="none" stroke="currentColor" stroke-width="1.800" stroke-linecap="round" stroke-linejoin="round"/></symbol>
 <symbol id="i-feed" viewBox="0 0 24 24"><path d="M4 5h16v14H4zM4 10h16M9 10v9" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
 <symbol id="i-map" viewBox="0 0 24 24"><path d="M12 21s-6-6.200-6-11a6 6 0 0112 0c0 4.800-6 11-6 11z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="10" r="2.200" fill="currentColor"/></symbol>
 <symbol id="i-cam" viewBox="0 0 24 24"><path d="M3 8h4l2-3h6l2 3h4v11H3z" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="13" r="3.500" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
@@ -43,6 +45,7 @@
 <symbol id="i-heart" viewBox="0 0 24 24"><path d="M12 20s-8-5-8-11a4.500 4.500 0 018-2.800A4.500 4.500 0 0120 9c0 6-8 11-8 11z" fill="none" stroke="currentColor" stroke-width="1.8"/></symbol>
 </defs></svg>
 <script src="lib/leaflet.js"></script>
-<script src="scenes.js?v=13"></script>
-<script src="app.js?v=13"></script>
+<script src="audio.js?v=14"></script>
+<script src="scenes.js?v=14"></script>
+<script src="app.js?v=14"></script>
 </body></html>
