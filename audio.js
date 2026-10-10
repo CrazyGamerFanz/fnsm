@@ -2,7 +2,7 @@ const Aud=(()=>{
  const K='fnsm-audio';
  let st={music:true,sfx:true,vol:.7};
  try{Object.assign(st,JSON.parse(localStorage.getItem(K)||'{}'))}catch(e){}
- let ctx=null,master,musicG,sfxG,nbuf,timer=null,nextT=0,stepI=0,keep=null,lastBlip=0,playing=false,track=null,kind='bundled';
+ let ctx=null,master,musicG,sfxG,nbuf,timer=null,nextT=0,stepI=0,keep=null,lastBlip=0,playing=false,P=null,kind='bundled';
  const BUNDLED='Greater Together (feat. Ben Billions)';
  const api={onchange:null};
  const saveSt=()=>{try{localStorage.setItem(K,JSON.stringify(st))}catch(e){}};
@@ -77,22 +77,50 @@ const Aud=(()=>{
  async function idbGet(){try{const db=await idb();return await new Promise(res=>{const q=db.transaction('f').objectStore('f').get('custom');q.onsuccess=()=>res(q.result||null);q.onerror=()=>res(null)})}catch(e){return null}}
  async function idbPut(v){const db=await idb();return new Promise((res,rej)=>{const t=db.transaction('f','readwrite');t.objectStore('f').put(v,'custom');t.oncomplete=res;t.onerror=()=>rej(t.error)})}
  async function idbDel(){try{const db=await idb();return await new Promise(res=>{const t=db.transaction('f','readwrite');t.objectStore('f').delete('custom');t.oncomplete=res;t.onerror=res})}catch(e){}}
+ function makePlayer(onerr){
+  const XF=5,els=[0,1].map(()=>{const e=new Audio();e.loop=false;e.preload='auto';return e});
+  const gs=els.map((e,i)=>{const g=ctx.createGain();g.gain.value=i?0:1;try{ctx.createMediaElementSource(e).connect(g)}catch(x){}g.connect(musicG);return g});
+  let cur=0,fading=false,url='',iv=null;
+  const curve=up=>{const n=64,r=new Float32Array(n);for(let i=0;i<n;i++){const x=i/(n-1);r[i]=up?Math.sin(x*Math.PI/2):Math.cos(x*Math.PI/2)}return r};
+  els.forEach((e,i)=>{
+   e.addEventListener('error',()=>{if(i===cur||!e.dataset.u)onerr()});
+   e.addEventListener('ended',()=>{if(playing&&i===cur&&!fading){e.currentTime=0;e.play().catch(()=>{})}});
+  });
+  function settle(){gs.forEach((g,i)=>{g.gain.cancelScheduledValues(ctx.currentTime);g.gain.value=i===cur?1:0});els.forEach((e,i)=>{if(i!==cur){try{e.pause();e.currentTime=0}catch(x){}}})}
+  function watch(){
+   const a1=els[cur],b1=els[1-cur],d=a1.duration;
+   if(!isFinite(d)||d<XF*3||a1.paused)return;
+   if(!fading&&a1.currentTime>6&&b1.dataset.u!==url){b1.dataset.u=url;b1.src=url;b1.load()}
+   if(!fading&&d-a1.currentTime<=XF+.2){
+    fading=true;const t=ctx.currentTime,dur=Math.max(.6,d-a1.currentTime),old=cur;
+    gs[0].gain.cancelScheduledValues(t);gs[1].gain.cancelScheduledValues(t);
+    try{b1.currentTime=0}catch(x){}
+    gs[1-old].gain.setValueCurveAtTime(curve(true),t,dur);gs[old].gain.setValueCurveAtTime(curve(false),t,dur);
+    b1.play().catch(()=>{});
+    setTimeout(()=>{if(!fading)return;cur=1-old;fading=false;settle()},dur*1000+200);
+   }
+  }
+  return{
+   setSrc(u){if(url===u)return;url=u;els.forEach(e=>{e.dataset.u=''});cur=0;fading=false;els[0].dataset.u=u;els[0].src=u;settle()},
+   play(){if(!iv)iv=setInterval(watch,250);return els[cur].play()},
+   pause(){clearInterval(iv);iv=null;fading=false;els.forEach(e=>{try{e.pause()}catch(x){}});settle()},
+   paused(){return els[cur].paused},
+   error(){return !!els[cur].error},
+   reset(){url=''}
+  };
+ }
  async function useTrack(){
   if(!ensure())return;
   let url='music/bg.mp3',k='bundled';
   const c=await idbGet();if(c&&c.blob){url=URL.createObjectURL(c.blob);k='custom'}
   if(!playing)return;
-  if(!track){
-   track=new Audio();track.loop=true;track.preload='auto';
-   try{ctx.createMediaElementSource(track).connect(musicG)}catch(e){}
-   track.addEventListener('error',()=>{if(!playing)return;if(k==='custom'||kind==='custom'){kind='bundled'}else{kind='synth';stopTrack();startSynth()}api.onchange&&api.onchange()});
-  }
-  if(track.dataset.u!==url){track.dataset.u=url;track.src=url}
+  if(!P)P=makePlayer(()=>{if(!playing)return;if(kind==='custom'){api.clearCustom()}else{kind='synth';stopTrack();startSynth();api.onchange&&api.onchange()}});
+  P.setSrc(url);
   kind=k;
-  try{await track.play()}catch(e){if(track.error){kind='synth';startSynth()}}
+  try{await P.play()}catch(e){if(P.error()){kind='synth';startSynth()}}
   api.onchange&&api.onchange();
  }
- function stopTrack(){if(track){try{track.pause()}catch(e){}}}
+ function stopTrack(){if(P)P.pause()}
  function startMusic(){
   if(!ensure()||playing)return;
   playing=true;
@@ -169,13 +197,13 @@ const Aud=(()=>{
   if(!ensure())return;
   if(ctx.state==='suspended')ctx.resume();
   keepAlive();
-  if(st.music){if(!playing)startMusic();else if(track&&track.paused&&kind!=='synth'&&!document.hidden)track.play().catch(()=>{})}
+  if(st.music){if(!playing)startMusic();else if(P&&P.paused()&&kind!=='synth'&&!document.hidden)P.play().catch(()=>{})}
  };
  api.setMusic=on=>{st.music=!!on;saveSt();if(on){api.unlock();if(ctx&&musicG)startMusic()}else stopMusic();api.onchange&&api.onchange()};
  api.trackName=()=>st.customName||(kind==='synth'?'Built-in score':BUNDLED);
  api.hasCustom=()=>!!st.customName;
- api.setCustom=async f=>{await idbPut({blob:f,name:f.name});st.customName=f.name.replace(/\.[^.]+$/,'');saveSt();if(playing){stopTrack();if(track)track.dataset.u='';stopSynth();await useTrack()}api.onchange&&api.onchange()};
- api.clearCustom=async()=>{await idbDel();delete st.customName;saveSt();if(playing){stopTrack();if(track)track.dataset.u='';stopSynth();await useTrack()}api.onchange&&api.onchange()};
+ api.setCustom=async f=>{await idbPut({blob:f,name:f.name});st.customName=f.name.replace(/\.[^.]+$/,'');saveSt();if(playing){stopTrack();if(P)P.reset();stopSynth();await useTrack()}api.onchange&&api.onchange()};
+ api.clearCustom=async()=>{await idbDel();delete st.customName;saveSt();if(playing){stopTrack();if(P)P.reset();stopSynth();await useTrack()}api.onchange&&api.onchange()};
  api.setSfx=on=>{st.sfx=!!on;saveSt();if(ctx)sfxG.gain.value=on?1:0;api.onchange&&api.onchange()};
  api.setVol=v=>{st.vol=Math.max(0,Math.min(1,v));saveSt();if(ctx)master.gain.setTargetAtTime(st.vol,ctx.currentTime,.05)};
  api.tryAuto=async()=>{
@@ -186,13 +214,13 @@ const Aud=(()=>{
   startMusic();
   await new Promise(r=>setTimeout(r,500));
   if(kind==='synth')return true;
-  return !!(track&&!track.paused);
+  return !!(P&&!P.paused());
  };
  api.toggleAll=()=>{const anyOn=st.music||st.sfx;if(anyOn){api.setSfx(false);api.setMusic(false)}else{api.setSfx(true);api.setMusic(true)}};
  api.anyOn=()=>st.music||st.sfx;
  document.addEventListener('visibilitychange',()=>{
   if(!ctx)return;
-  if(document.hidden){ctx.suspend&&ctx.suspend();if(track)try{track.pause()}catch(e){}}else if(st.music||st.sfx){ctx.resume&&ctx.resume();if(playing&&track&&kind!=='synth')track.play().catch(()=>{})}
+  if(document.hidden){ctx.suspend&&ctx.suspend();if(P)P.pause()}else if(st.music||st.sfx){ctx.resume&&ctx.resume();if(playing&&P&&kind!=='synth')P.play().catch(()=>{})}
  });
  ['pointerdown','touchend','keydown'].forEach(ev=>document.addEventListener(ev,()=>api.unlock(),{passive:true}));
  return api;
