@@ -169,7 +169,7 @@ const Aud=(()=>{
   if(!ensure())return;
   if(ctx.state==='suspended')ctx.resume();
   keepAlive();
-  if(st.music&&!playing)startMusic();
+  if(st.music){if(!playing)startMusic();else if(track&&track.paused&&kind!=='synth'&&!document.hidden)track.play().catch(()=>{})}
  };
  api.setMusic=on=>{st.music=!!on;saveSt();if(on){api.unlock();if(ctx&&musicG)startMusic()}else stopMusic();api.onchange&&api.onchange()};
  api.trackName=()=>st.customName||(kind==='synth'?'Built-in score':BUNDLED);
@@ -178,6 +178,16 @@ const Aud=(()=>{
  api.clearCustom=async()=>{await idbDel();delete st.customName;saveSt();if(playing){stopTrack();if(track)track.dataset.u='';stopSynth();await useTrack()}api.onchange&&api.onchange()};
  api.setSfx=on=>{st.sfx=!!on;saveSt();if(ctx)sfxG.gain.value=on?1:0;api.onchange&&api.onchange()};
  api.setVol=v=>{st.vol=Math.max(0,Math.min(1,v));saveSt();if(ctx)master.gain.setTargetAtTime(st.vol,ctx.currentTime,.05)};
+ api.tryAuto=async()=>{
+  if(!st.music)return true;
+  if(!ensure())return true;
+  try{await Promise.race([ctx.resume(),new Promise(r=>setTimeout(r,400))])}catch(e){}
+  if(ctx.state!=='running')return false;
+  startMusic();
+  await new Promise(r=>setTimeout(r,500));
+  if(kind==='synth')return true;
+  return !!(track&&!track.paused);
+ };
  api.toggleAll=()=>{const anyOn=st.music||st.sfx;if(anyOn){api.setSfx(false);api.setMusic(false)}else{api.setSfx(true);api.setMusic(true)}};
  api.anyOn=()=>st.music||st.sfx;
  document.addEventListener('visibilitychange',()=>{

@@ -298,7 +298,15 @@ function leaveIntro(){const el=$('#intro');if(!el)return;el.classList.add('out')
 function intro(){
  const el=$('#intro');
  const logo='<img class="big-logo" src="logo.svg" alt="FNSM" width="132" height="132">';
- if(acct&&S.handle){el.innerHTML=`<div class="ic">${logo}<div class="wm big2">FN<b>SM</b></div><div class="sub">Friendly Neighborhood Spider-Man</div><div class="ld"><i></i></div></div>`;setTimeout(leaveIntro,1100);return}
+ if(acct&&S.handle){
+  el.innerHTML=`<div class="ic">${logo}<div class="wm big2">FN<b>SM</b></div><div class="sub">Friendly Neighborhood Spider-Man</div><div class="ld"><i></i></div><div class="taphint" id="taph"></div></div>`;
+  Aud.tryAuto().then(ok=>{
+   if(ok){setTimeout(leaveIntro,900);return}
+   const h=$('#taph');if(h)h.textContent='Tap to enter';el.classList.add('wait');
+   const go=()=>{el.removeEventListener('pointerdown',go);Aud.unlock();setTimeout(leaveIntro,120)};el.addEventListener('pointerdown',go);
+  });
+  return}
+ Aud.tryAuto();
  const legacy=!Object.keys(getUsers()).length&&localStorage.getItem(LEGACY);
  el.innerHTML=`<div class="ob"><div class="obtrack" id="obt">
  <section class="obp on">${logo}<div class="wm big2">FN<b>SM</b></div><div class="sub">Friendly Neighborhood Spider-Man</div><p class="lead">The city calls. You answer. Get requests from New Yorkers and swing into action.</p><button class="btn" data-ob="1">Get started</button></section>

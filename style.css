@@ -204,3 +204,8 @@ button{transition:transform .18s var(--ease),background .25s,color .25s,border-c
 input[type=range]{-webkit-appearance:none;appearance:none;flex:1;height:4px;padding:0;border:0;background:var(--ln);border-radius:2px;outline:none;accent-color:var(--red)}
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--red);border:2px solid #fff;cursor:pointer}
 input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--red);border:2px solid #fff;cursor:pointer}
+
+.taphint{margin-top:18px;font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--mu);min-height:16px}
+#intro.wait .taphint{animation:tph 1.6s ease-in-out infinite;color:#fff}
+@keyframes tph{50%{opacity:.35}}
+#intro.wait .ld{opacity:.4}
